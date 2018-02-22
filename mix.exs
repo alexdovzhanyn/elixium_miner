@@ -25,6 +25,9 @@ defmodule Miner.Mixfile do
 
   # Run "mix help deps" to learn about dependencies.
   defp deps do
-    [{:ultradark_core, "~> 0.1"}]
+    [
+      {:ultradark_core, "~> 0.1"},
+      {:decimal, "~> 1.0"}
+    ]
   end
 end
