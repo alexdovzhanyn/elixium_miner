@@ -6,6 +6,7 @@ defmodule Miner do
   alias UltraDark.Transaction
   alias UltraDark.UtxoStore
   alias UltraDark.Utilities
+  alias Decimal, as: D
 
   def initialize(address) do
     Ledger.initialize
@@ -57,8 +58,9 @@ defmodule Miner do
     end
   end
 
+  @spec calculate_coinbase_amount(Block) :: Decimal
   defp calculate_coinbase_amount(block) do
-    Block.calculate_block_reward(block.index) + Block.total_block_fees(block.transactions)
+    D.add(Block.calculate_block_reward(block.index), Block.total_block_fees(block.transactions))
   end
 
   defp merge_block(coinbase, block) do
