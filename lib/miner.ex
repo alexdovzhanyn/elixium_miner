@@ -8,6 +8,10 @@ defmodule Miner do
   alias UltraDark.Utilities
   alias Decimal, as: D
 
+  @index_space 10
+  @nonce_space 10
+  @elapsed_space 10
+
   def initialize(address) do
     Ledger.initialize
     UtxoStore.initialize
@@ -47,7 +51,13 @@ defmodule Miner do
     clear = "\e[0m"
     elapsed = (:os.system_time - before) / 1000000000
 
-    IO.puts "#{blue}Index:#{clear} #{block.index} #{blue}Hash:#{clear} #{block.hash} #{blue}Nonce:#{clear} #{block.nonce} #{blue}Elapsed:#{clear} #{elapsed}s #{blue}Hashrate:#{clear} #{block.nonce / elapsed}H/s"
+    index_str = "#{blue}Index:#{clear} #{String.pad_trailing(inspect(block.index), @index_space)}"
+    hash_str = "#{blue}Hash:#{clear} #{block.hash}"
+    nonce_str = "#{blue}Nonce:#{clear} #{String.pad_trailing(inspect(block.nonce), @nonce_space)}"
+    elapsed_str = "#{blue}Elapsed (s):#{clear} #{String.pad_trailing(inspect(elapsed), @elapsed_space)}"
+    hashrate_str = "#{blue}Hashrate (H/s):#{clear} #{round(block.nonce / elapsed)}"
+
+    IO.puts "#{index_str} #{hash_str} #{nonce_str} #{elapsed_str} #{hashrate_str}"
 
     case Validator.is_block_valid?(block, chain, difficulty) do
       :ok -> main(Blockchain.add_block(chain, block), address, difficulty)
