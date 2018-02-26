@@ -63,8 +63,6 @@ defmodule Miner do
 
     IO.puts("#{index_str} #{hash_str} #{nonce_str} #{elapsed_str} #{hashrate_str}")
 
-    block = %{block | index: block.index - 1}
-
     case Validator.is_block_valid?(block, chain, difficulty) do
       :ok ->
         main(Blockchain.add_block(chain, block), address, difficulty)
