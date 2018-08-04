@@ -1,2 +1,2 @@
-# UltraDark Miner
-Official miner implementation for the UltraDark blockchain
+# Elixium Miner
+Official miner implementation for the Elixium blockchain
