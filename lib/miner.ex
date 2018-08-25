@@ -1,12 +1,13 @@
 defmodule Miner do
-  alias UltraDark.Blockchain
-  alias UltraDark.Blockchain.Block
-  alias UltraDark.Validator
-  alias UltraDark.Ledger
-  alias UltraDark.Transaction
-  alias UltraDark.UtxoStore
-  alias UltraDark.Utilities
-  alias UltraDark.Error
+  alias Elixium.Blockchain
+  alias Elixium.Blockchain.Block
+  alias Elixium.Validator
+  alias Elixium.Ledger
+  alias Elixium.Transaction
+  alias Elixium.UtxoStore
+  alias Elixium.Utilities
+  alias Elixium.Error
+  alias Elixium.P2P.Peer
   alias Decimal, as: D
 
   @index_space 10
@@ -18,10 +19,12 @@ defmodule Miner do
     UtxoStore.initialize()
     chain = Blockchain.initialize()
 
-    main(chain, address, List.first(chain).difficulty)
+    p2p_supervisor = Peer.initialize
+
+    main(chain, address, List.first(chain).difficulty, p2p_supervisor)
   end
 
-  def main(chain, address, difficulty) do
+  def main(chain, address, difficulty, p2p_supervisor) do
     block =
       List.first(chain)
       |> Block.initialize()
@@ -65,11 +68,12 @@ defmodule Miner do
 
     case Validator.is_block_valid?(block, chain, difficulty) do
       :ok ->
-        main(Blockchain.add_block(chain, block), address, difficulty)
+        distribute_block(block, p2p_supervisor)
+        main(Blockchain.add_block(chain, block), address, difficulty, p2p_supervisor)
 
       err ->
         IO.puts(Error.to_string(err))
-        main(chain, address, difficulty)
+        main(chain, address, difficulty, p2p_supervisor)
     end
   end
 
@@ -86,5 +90,11 @@ defmodule Miner do
       transactions: new_transactions,
       merkle_root: Utilities.calculate_merkle_root(txoids)
     })
+  end
+
+  defp distribute_block(block, p2p_supervisor) do
+    p2p_supervisor
+    |> Peer.connected_handlers()
+    |> Enum.each(&send(&1, block))
   end
 end

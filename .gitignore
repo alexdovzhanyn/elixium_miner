@@ -6,4 +6,5 @@ erl_crash.dump
 *.beam
 /.chaindata
 /.utxo
+/.peers
 mix.lock
