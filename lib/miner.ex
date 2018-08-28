@@ -2,9 +2,9 @@ defmodule Miner do
   alias Elixium.Blockchain
   alias Elixium.Blockchain.Block
   alias Elixium.Validator
-  alias Elixium.Ledger
+  alias Elixium.Store.Ledger
   alias Elixium.Transaction
-  alias Elixium.UtxoStore
+  alias Elixium.Store.Utxo
   alias Elixium.Utilities
   alias Elixium.Error
   alias Elixium.P2P.Peer
@@ -16,7 +16,7 @@ defmodule Miner do
 
   def initialize(address) do
     Ledger.initialize()
-    UtxoStore.initialize()
+    Utxo.initialize()
     chain = Blockchain.initialize()
 
     p2p_supervisor = Peer.initialize
@@ -95,6 +95,6 @@ defmodule Miner do
   defp distribute_block(block, p2p_supervisor) do
     p2p_supervisor
     |> Peer.connected_handlers()
-    |> Enum.each(&send(&1, block))
+    |> Enum.each(&send(&1, {"BLOCK", block}))
   end
 end
