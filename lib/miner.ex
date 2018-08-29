@@ -95,6 +95,6 @@ defmodule Miner do
   defp distribute_block(block, p2p_supervisor) do
     p2p_supervisor
     |> Peer.connected_handlers()
-    |> Enum.each(&send(&1, {"BLOCK", block}))
+    |> Enum.each(&send(&1, {"BLOCK_HEADER", Block.header(block)}))
   end
 end
