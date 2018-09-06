@@ -25,6 +25,11 @@ defmodule Miner do
   end
 
   def main(chain, address, difficulty, p2p_supervisor) do
+    # Wait until we're connected to at least one peer
+    if p2p_supervisor |> Peer.connected_handlers() |> length == 0 do
+      main(chain, address, difficulty, p2p_supervisor)
+    end
+
     block =
       List.first(chain)
       |> Block.initialize()
@@ -95,6 +100,6 @@ defmodule Miner do
   defp distribute_block(block, p2p_supervisor) do
     p2p_supervisor
     |> Peer.connected_handlers()
-    |> Enum.each(&send(&1, {"BLOCK_HEADER", Block.header(block)}))
+    |> Enum.each(&send(&1, {"BLOCK", block}))
   end
 end
