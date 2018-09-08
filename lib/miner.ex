@@ -19,15 +19,15 @@ defmodule Miner do
     Utxo.initialize()
     chain = Blockchain.initialize()
 
-    p2p_supervisor = Peer.initialize
+    Peer.initialize
 
-    main(chain, address, List.first(chain).difficulty, p2p_supervisor)
+    main(chain, address, List.first(chain).difficulty)
   end
 
-  def main(chain, address, difficulty, p2p_supervisor) do
+  def main(chain, address, difficulty) do
     # Wait until we're connected to at least one peer
-    if p2p_supervisor |> Peer.connected_handlers() |> length == 0 do
-      main(chain, address, difficulty, p2p_supervisor)
+    if length(Peer.connected_handlers()) == 0 do
+      main(chain, address, difficulty)
     end
 
     block =
@@ -73,12 +73,12 @@ defmodule Miner do
 
     case Validator.is_block_valid?(block, chain, difficulty) do
       :ok ->
-        distribute_block(block, p2p_supervisor)
-        main(Blockchain.add_block(chain, block), address, difficulty, p2p_supervisor)
+        distribute_block(block)
+        main(Blockchain.add_block(chain, block), address, difficulty)
 
       err ->
         IO.puts(Error.to_string(err))
-        main(chain, address, difficulty, p2p_supervisor)
+        main(chain, address, difficulty)
     end
   end
 
@@ -97,9 +97,7 @@ defmodule Miner do
     })
   end
 
-  defp distribute_block(block, p2p_supervisor) do
-    p2p_supervisor
-    |> Peer.connected_handlers()
-    |> Enum.each(&send(&1, {"BLOCK", block}))
+  defp distribute_block(block) do
+    Enum.each(Peer.connected_handlers(), &send(&1, {"BLOCK", block}))
   end
 end
