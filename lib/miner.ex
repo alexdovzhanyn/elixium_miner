@@ -14,21 +14,9 @@ defmodule Miner do
   @nonce_space 10
   @elapsed_space 10
 
-  def initialize(address) do
-    Ledger.initialize()
-    Utxo.initialize()
-    chain = Blockchain.initialize()
-
-    Peer.initialize
-
-    main(chain, address, List.first(chain).difficulty)
-  end
-
   def main(chain, address, difficulty) do
     # Wait until we're connected to at least one peer
-    if length(Peer.connected_handlers()) == 0 do
-      main(chain, address, difficulty)
-    end
+    await_peer_connection
 
     block =
       List.first(chain)
@@ -99,5 +87,15 @@ defmodule Miner do
 
   defp distribute_block(block) do
     Enum.each(Peer.connected_handlers(), &send(&1, {"BLOCK", block}))
+  end
+
+  defp await_peer_connection do
+    case :pg2.which_groups() do
+      [] -> await_peer_connection()
+      [:p2p_handlers] ->
+        if length(Peer.connected_handlers()) == 0 do
+          await_peer_connection()
+        end
+    end
   end
 end

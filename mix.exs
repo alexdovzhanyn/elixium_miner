@@ -3,15 +3,10 @@ defmodule Miner.Mixfile do
 
   def project do
     [
-      app: :miner,
+      app: :elixium_miner,
       version: "0.1.0",
-      build_path: "_build",
-      config_path: "config/config.exs",
-      deps_path: "deps",
-      lockfile: "mix.lock",
-      elixir: "~> 1.5",
-      elixirc_paths: ["lib"],
-      start_permanent: Mix.env() == :prod,
+      elixir: "~> 1.7",
+      start_permanent: true,
       deps: deps()
     ]
   end
@@ -19,6 +14,7 @@ defmodule Miner.Mixfile do
   # Run "mix help compile.app" to learn about applications.
   def application do
     [
+      mod: {ElixiumMinerApp, []},
       extra_applications: [:logger]
     ]
   end
