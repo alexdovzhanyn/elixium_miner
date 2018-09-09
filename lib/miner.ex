@@ -2,9 +2,7 @@ defmodule Miner do
   alias Elixium.Blockchain
   alias Elixium.Blockchain.Block
   alias Elixium.Validator
-  alias Elixium.Store.Ledger
   alias Elixium.Transaction
-  alias Elixium.Store.Utxo
   alias Elixium.Utilities
   alias Elixium.Error
   alias Elixium.P2P.Peer
@@ -16,7 +14,7 @@ defmodule Miner do
 
   def main(chain, address, difficulty) do
     # Wait until we're connected to at least one peer
-    await_peer_connection
+    await_peer_connection()
 
     block =
       List.first(chain)
