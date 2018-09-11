@@ -9,7 +9,7 @@ defmodule ElixiumMinerApp do
   def start(_type, _args) do
     Ledger.initialize()
     Utxo.initialize()
-    chain = Blockchain.initialize()
+    Blockchain.initialize()
 
     address =
       case Application.get_env(:elixium_miner, :address) do
@@ -19,7 +19,7 @@ defmodule ElixiumMinerApp do
         pkey -> pkey
       end
 
-    comm_pid = spawn_link(Miner, :main, [chain, address, hd(chain).difficulty])
+    comm_pid = spawn_link(Miner, :main, [address])
 
     if port = Application.get_env(:elixium_miner, :port) do
       Peer.initialize(comm_pid, port)

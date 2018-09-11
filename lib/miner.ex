@@ -4,6 +4,7 @@ defmodule Miner do
   alias Elixium.Validator
   alias Elixium.Transaction
   alias Elixium.Utilities
+  alias Elixium.Store.Ledger
   alias Elixium.Error
   alias Elixium.P2P.Peer
   alias Decimal, as: D
@@ -12,21 +13,23 @@ defmodule Miner do
   @nonce_space 10
   @elapsed_space 10
 
-  def main(chain, address, difficulty) do
+  def main(address) do
     # Wait until we're connected to at least one peer
     await_peer_connection()
 
-    block =
-      List.first(chain)
-      |> Block.initialize()
+    last_block = Ledger.last_block()
+
+    block = Block.initialize(last_block)
+
+    # chain = :ets
 
     difficulty =
       if rem(block.index, Blockchain.diff_rebalance_offset()) == 0 do
-        new_difficulty = Blockchain.recalculate_difficulty(chain) + difficulty
-        IO.puts("Difficulty recalculated! Changed from #{difficulty} to #{new_difficulty}")
+        new_difficulty = Blockchain.recalculate_difficulty(chain) + last_block.difficulty
+        IO.puts("Difficulty recalculated! Changed from #{last_block.difficulty} to #{new_difficulty}")
         new_difficulty
       else
-        difficulty
+        last_block.difficulty
       end
 
     block = %{block | difficulty: difficulty}
@@ -59,12 +62,13 @@ defmodule Miner do
 
     case Validator.is_block_valid?(block, chain, difficulty) do
       :ok ->
+        Blockchain.add_block(block)
         distribute_block(block)
-        main(Blockchain.add_block(chain, block), address, difficulty)
+        main(address)
 
       err ->
         IO.puts(Error.to_string(err))
-        main(chain, address, difficulty)
+        main( address)
     end
   end
 
