@@ -21,8 +21,6 @@ defmodule Miner do
 
     block = Block.initialize(last_block)
 
-    # chain = :ets
-
     difficulty =
       if rem(block.index, Blockchain.diff_rebalance_offset()) == 0 do
         new_difficulty = Blockchain.recalculate_difficulty() + last_block.difficulty
