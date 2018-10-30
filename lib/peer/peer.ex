@@ -69,8 +69,14 @@ defmodule Miner.Peer do
   end
 
   def handle_info({block_query_response = %{type: "BLOCK_QUERY_RESPONSE"}, _caller}, state) do
-    Logger.warn("GOT SOME NEW BLOCKS!")
-    Enum.each(block_query_response.blocks, &LedgerManager.handle_new_block/1)
+    if length(block_query_response.blocks) > 0 do
+      Logger.info("Recieved #{length(block_query_response.blocks)} new blocks from peer.")
+      Enum.each(block_query_response.blocks, &LedgerManager.handle_new_block/1)
+
+      # Restart the miner to build upon these newly received blocks
+      BlockCalculator.restart_mining()
+    end
+
     {:noreply, state}
   end
 
