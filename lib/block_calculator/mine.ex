@@ -39,6 +39,8 @@ defmodule Miner.BlockCalculator.Mine do
       |> merge_block(block)
       |> Block.mine()
 
+    Logger.info("Calculated hash for block at index #{block.index}.")
+
     BlockCalculator.finished_mining(mined_block)
   end
 
