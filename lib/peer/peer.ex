@@ -60,31 +60,52 @@ defmodule Miner.Peer do
     {:noreply, state}
   end
 
-  # Handles a block query request, where another peer has asked this node to send
-  # all the blocks it has since a given index.
   def handle_info({block_query_request = %{type: "BLOCK_QUERY_REQUEST"}, caller}, state) do
+    send(caller, {
+      "BLOCK_QUERY_RESPONSE",
+      Ledger.block_at_height(block_query_request.index)
+    })
+
+    {:noreply, state}
+  end
+
+  def handle_info({block_query_response = %{type: "BLOCK_QUERY_RESPONSE"}, _caller}, state) do
+
+  end
+
+  # Handles a batch block query request, where another peer has asked this node to send
+  # all the blocks it has since a given index.
+  def handle_info({block_query_request = %{type: "BLOCK_BATCH_QUERY_REQUEST"}, caller}, state) do
     # TODO: This is a possible DOS vulnerability if an attacker requests a very
     # high amount of blocks. Need to figure out a better way to do this; maybe
     # we need to limit the maximum amount of blocks a peer is allowed to request.
+    last_block = Ledger.last_block()
+
     blocks =
-      block_query_request.starting_at
-      |> Range.new(Ledger.last_block().index)
-      |> Enum.map(&Ledger.block_at_height/1)
+      if block_query_request.starting_at <= last_block.index do
+        block_query_request.starting_at
+        |> Range.new(last_block.index)
+        |> Enum.map(&Ledger.block_at_height/1)
+        |> Enum.filter(&(&1 != :none))
+      else
+        []
+      end
 
     send(caller, {
-      "BLOCK_QUERY_RESPONSE",
+      "BLOCK_BATCH_QUERY_RESPONSE",
       %{blocks: blocks}
     })
 
     {:noreply, state}
   end
 
-  # Handles a block query response, where we've requested new blocks and are now
+  # Handles a batch block query response, where we've requested new blocks and are now
   # getting a response with potentially new blocks
-  def handle_info({block_query_response = %{type: "BLOCK_QUERY_RESPONSE"}, _caller}, state) do
+  def handle_info({block_query_response = %{type: "BLOCK_BATCH_QUERY_RESPONSE"}, _caller}, state) do
     if length(block_query_response.blocks) > 0 do
       Logger.info("Recieved #{length(block_query_response.blocks)} new blocks from peer.")
-      Enum.each(block_query_response.blocks, &LedgerManager.handle_new_block/1)
+
+      Enum.map(block_query_response.blocks, &LedgerManager.handle_new_block/1)
 
       # Restart the miner to build upon these newly received blocks
       BlockCalculator.restart_mining()
@@ -101,13 +122,18 @@ defmodule Miner.Peer do
     if length(Peer.connected_handlers()) == 1 do
       # We just went from 0 connections to 1 connection. This indicates that we've
       # likely just joined the network. Let's ask our peer for new blocks, if there
-      # are any.
+      # are any. We'll ask for all blocks starting from our current index minus
+      # 120 (4 hours worth of blocks before we disconnected) just in case there
+      # was a fork after we disconnected.
 
       Logger.info("Reconnected to the network! Querying for missed blocks...")
 
+      # Current index minus 120 or 1, whichever is greater.
+      starting_at = max(1, Ledger.last_block().index - 120)
+
       send(handler_pid, {
-        "BLOCK_QUERY_REQUEST",
-        %{starting_at: Ledger.last_block().index + 1}
+        "BLOCK_BATCH_QUERY_REQUEST",
+        %{starting_at: starting_at}
       })
     end
 
