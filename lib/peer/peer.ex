@@ -23,10 +23,16 @@ defmodule Miner.Peer do
     {:ok, []}
   end
 
+  @doc """
+    Sends a newly mined block to the connection handlers so that it can be
+    relayed across the network.
+  """
+  @spec distribute_block(Elixium.Blockchain.Block) :: none
   def distribute_block(block) do
     Enum.each(Peer.connected_handlers(), &send(&1, {"BLOCK", block}))
   end
 
+  # Handles recieved blocks
   def handle_info({block = %{type: "BLOCK"}, _caller}, state) do
     case LedgerManager.handle_new_block(block) do
       :ok ->
@@ -54,7 +60,12 @@ defmodule Miner.Peer do
     {:noreply, state}
   end
 
+  # Handles a block query request, where another peer has asked this node to send
+  # all the blocks it has since a given index.
   def handle_info({block_query_request = %{type: "BLOCK_QUERY_REQUEST"}, caller}, state) do
+    # TODO: This is a possible DOS vulnerability if an attacker requests a very
+    # high amount of blocks. Need to figure out a better way to do this; maybe
+    # we need to limit the maximum amount of blocks a peer is allowed to request.
     blocks =
       block_query_request.starting_at
       |> Range.new(Ledger.last_block().index)
@@ -68,6 +79,8 @@ defmodule Miner.Peer do
     {:noreply, state}
   end
 
+  # Handles a block query response, where we've requested new blocks and are now
+  # getting a response with potentially new blocks
   def handle_info({block_query_response = %{type: "BLOCK_QUERY_RESPONSE"}, _caller}, state) do
     if length(block_query_response.blocks) > 0 do
       Logger.info("Recieved #{length(block_query_response.blocks)} new blocks from peer.")
