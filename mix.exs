@@ -14,7 +14,7 @@ defmodule Miner.Mixfile do
   # Run "mix help compile.app" to learn about applications.
   def application do
     [
-      mod: {ElixiumMinerApp, []},
+      mod: {Miner, []},
       extra_applications: [:logger]
     ]
   end
