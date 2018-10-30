@@ -15,7 +15,6 @@ defmodule Miner.BlockCalculator.Mine do
 
   def mine(address) do
     last_block = Ledger.last_block()
-
     block = Block.initialize(last_block)
 
     difficulty =

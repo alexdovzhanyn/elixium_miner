@@ -5,7 +5,7 @@ defmodule Miner do
     Elixium.Store.Ledger.initialize()
     Elixium.Store.Utxo.initialize()
     Elixium.Blockchain.initialize()
-    :observer.start()
+    Elixium.Pool.Orphan.initialize()
     Miner.Supervisor.start_link()
   end
 

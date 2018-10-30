@@ -10,7 +10,12 @@ defmodule Miner.Peer do
   end
 
   def init(_args) do
-    Peer.initialize()
+    if port = Application.get_env(:elixium_miner, :port) do
+      Peer.initialize(port)
+    else
+      Peer.initialize()
+    end
+
     BlockCalculator.start_mining()
 
     {:ok, []}
@@ -34,7 +39,12 @@ defmodule Miner.Peer do
         # Restart the miner to build upon this newly received block
         BlockCalculator.restart_mining()
 
-
+      :gossip ->
+        # For one reason or another, we want to gossip this block without
+        # restarting our current block calculation. (Perhaps this is a fork block)
+        Peer.gossip("BLOCK", block)
+        Logger.info("Gossipped block #{block.hash} to peers.")
+        
       :ignore -> :ignore # We already know of this block. Ignore it
       :invalid -> Logger.info("Recieved invalid block at index #{block.index}.")
     end
