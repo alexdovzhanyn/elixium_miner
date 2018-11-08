@@ -33,7 +33,7 @@ defmodule Miner.Peer do
   end
 
   # Handles recieved blocks
-  def handle_info({block = %{type: "BLOCK"}, _caller}, state) do
+  def handle_info({block = %{type: "BLOCK"}, caller}, state) do
     case LedgerManager.handle_new_block(block) do
       :ok ->
         # We've received a valid block. We need to stop mining the block we're
@@ -53,6 +53,10 @@ defmodule Miner.Peer do
         Peer.gossip("BLOCK", block)
         Logger.info("Gossipped block #{block.hash} to peers.")
 
+      {:missing_blocks, fork_chain} ->
+        # We've discovered a fork, but we can't rebuild the fork chain without
+        # some blocks. Let's request them from our peer.
+        query_block(hd(fork_chain).index - 1, caller)
       :ignore -> :ignore # We already know of this block. Ignore it
       :invalid -> Logger.info("Recieved invalid block at index #{block.index}.")
     end
@@ -70,7 +74,17 @@ defmodule Miner.Peer do
   end
 
   def handle_info({block_query_response = %{type: "BLOCK_QUERY_RESPONSE"}, _caller}, state) do
+    orphans_ahead =
+      Ledger.last_block().index + 1
+      |> Orphan.blocks_at_height()
+      |> length()
 
+    if orphans_ahead > 0 do
+      # If we have an orphan with an index that is greater than our current latest
+      # block, we're likely here trying to rebuild the fork chain and have requested
+      # a block that we're missing.
+      # TODO: FETCH BLOCKS 
+    end
   end
 
   # Handles a batch block query request, where another peer has asked this node to send
@@ -91,10 +105,7 @@ defmodule Miner.Peer do
         []
       end
 
-    send(caller, {
-      "BLOCK_BATCH_QUERY_RESPONSE",
-      %{blocks: blocks}
-    })
+    send(caller, {"BLOCK_BATCH_QUERY_RESPONSE", %{blocks: blocks}})
 
     {:noreply, state}
   end
@@ -131,10 +142,7 @@ defmodule Miner.Peer do
       # Current index minus 120 or 1, whichever is greater.
       starting_at = max(1, Ledger.last_block().index - 120)
 
-      send(handler_pid, {
-        "BLOCK_BATCH_QUERY_REQUEST",
-        %{starting_at: starting_at}
-      })
+      send(handler_pid, {"BLOCK_BATCH_QUERY_REQUEST", %{starting_at: starting_at}})
     end
 
     {:noreply, state}
@@ -146,4 +154,5 @@ defmodule Miner.Peer do
     {:noreply, state}
   end
 
+  def query_block(index, caller), do: send(caller, {"BLOCK_QUERY_REQUEST", index: index})
 end

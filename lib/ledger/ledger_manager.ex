@@ -16,7 +16,7 @@ defmodule Miner.LedgerManager do
     logic is handled internally; this returns an atom describing what the peer
     handler should do with this block.
   """
-  @spec handle_new_block(Block) :: :ok | :gossip | :ignore | :invalid
+  @spec handle_new_block(Block) :: :ok | :gossip | :ignore | :invalid | {:missing_blocks, list}
   def handle_new_block(block) do
     # Check if we've already received a block at this index. If we have,
     # diff it against the one we've stored. If we haven't, check to see
@@ -136,11 +136,17 @@ defmodule Miner.LedgerManager do
   # Try to rebuild a fork chain based on this block and it's ancestors in the
   # orphan pool. If we're successful, validate and try to swap to the new chain.
   # Otherwise, just ignore this block.
-  @spec evaluate_chain_swap(Block) :: :ok | :ignore
+  @spec evaluate_chain_swap(Block) :: :ok | :ignore | {:missing_blocks, list}
   defp evaluate_chain_swap(block) do
     # Rebuild the chain backwards until reaching a point where we agree on the
     # same blocks as the fork does.
     case rebuild_fork_chain(block) do
+      {:missing_blocks, fork_chain} ->
+        # We don't have anything that this block can reference as a previous
+        # block, let's save the block as an orphan and see if we can request
+        # some more blocks.
+        Orphan.add(block)
+        {:missing_blocks, fork_chain}
       {fork_chain, fork_source} ->
         # Calculate the difficulty that we were looking for at the time of the
         # fork. First, we need to find the start of the last epoch
@@ -228,14 +234,12 @@ defmodule Miner.LedgerManager do
 
   # Recursively loops through the orphan pool to build a fork chain as long as
   # we can, based on a given block.
-  @spec rebuild_fork_chain(list) :: list | false
+  @spec rebuild_fork_chain(list) :: list | {:missing_blocks, list}
   defp rebuild_fork_chain(chain) when is_list(chain) do
     case Orphan.blocks_at_height(hd(chain).index - 1) do
       [] ->
-        # We don't have anything that this block can reference as a previous
-        # block, so just drop the block
-        IO.puts "got to false"
-        false
+        Logger.warn("Tried rebuilding fork chain, but was unable to find an ancestor.")
+        {:missing_blocks, chain}
       orphan_blocks ->
         orphan_blocks
         |> Enum.filter(fn {_, block} -> block.hash == hd(chain).previous_hash end)
