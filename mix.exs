@@ -15,7 +15,7 @@ defmodule Miner.Mixfile do
   def application do
     [
       mod: {Miner, []},
-      extra_applications: [:logger]
+      extra_applications: [:logger, :elixium_core]
     ]
   end
 
