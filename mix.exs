@@ -23,7 +23,8 @@ defmodule Miner.Mixfile do
   defp deps do
     [
       {:elixium_core, "~> 0.1"},
-      {:decimal, "~> 1.0"}
+      {:decimal, "~> 1.0"},
+      {:poison, "~> 3.1"}
     ]
   end
 end
