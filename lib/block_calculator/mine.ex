@@ -2,7 +2,7 @@ defmodule Miner.BlockCalculator.Mine do
   use Task
   alias Miner.BlockCalculator
   alias Elixium.Blockchain
-  alias Elixium.Blockchain.Block
+  alias Elixium.Block
   alias Elixium.Store.Ledger
   alias Elixium.Transaction
   alias Decimal, as: D
@@ -17,18 +17,7 @@ defmodule Miner.BlockCalculator.Mine do
     last_block = Ledger.last_block()
     block = Block.initialize(last_block)
 
-    difficulty =
-      if rem(block.index, Blockchain.diff_rebalance_offset()) == 0 do
-        new_difficulty = Blockchain.recalculate_difficulty() + last_block.difficulty
-        IO.puts("Difficulty recalculated! Changed from #{last_block.difficulty} to #{new_difficulty}")
-        new_difficulty
-      else
-        last_block.difficulty
-      end
-
-    block = %{block | difficulty: difficulty}
-
-    before = :os.system_time()
+    IO.puts "Difficulty: #{block.difficulty}"
 
     Logger.info("Mining block at index #{block.index}...")
 
@@ -39,7 +28,11 @@ defmodule Miner.BlockCalculator.Mine do
       |> merge_block(block)
       |> Block.mine()
 
+    IO.puts "Hash: #{mined_block.hash}"
+
     Logger.info("Calculated hash for block at index #{block.index}.")
+
+    IO.puts "Took #{(DateTime.utc_now() |> DateTime.to_unix) - block.timestamp} seconds."
 
     BlockCalculator.finished_mining(mined_block)
   end

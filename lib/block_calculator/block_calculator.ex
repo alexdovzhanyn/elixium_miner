@@ -4,8 +4,9 @@ defmodule Miner.BlockCalculator do
   require Logger
   alias Miner.BlockCalculator.Mine
   alias Miner.Peer
-  alias Elixium.Blockchain
   alias Elixium.Validator
+  alias Elixium.Store.Ledger
+  alias Elixium.Store.Utxo
   alias Elixium.Error
 
   def start_link(address) do
@@ -80,7 +81,8 @@ defmodule Miner.BlockCalculator do
   def handle_cast({:hash_found, block}, state) do
     case Validator.is_block_valid?(block, block.difficulty) do
       :ok ->
-        Blockchain.add_block(block)
+        Ledger.append_block(block)
+        Utxo.update_with_transactions(block.transactions)
         Peer.distribute_block(block)
         start_mining()
 

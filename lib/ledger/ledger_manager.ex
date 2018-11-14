@@ -2,7 +2,7 @@ defmodule Miner.LedgerManager do
   alias Elixium.Store.Ledger
   alias Elixium.Validator
   alias Elixium.Blockchain
-  alias Elixium.Blockchain.Block
+  alias Elixium.Block
   alias Elixium.Pool.Orphan
   alias Elixium.Store.Utxo
   require Logger
@@ -49,7 +49,7 @@ defmodule Miner.LedgerManager do
   defp validate_new_block(last_block, block) do
     # Recalculate target difficulty if necessary
     difficulty =
-      if rem(block.index, Blockchain.diff_rebalance_offset()) == 0 do
+      if rem(block.index, Application.get_env(:elixium_core, :diff_rebalance_offset)) == 0 do
         new_difficulty = Blockchain.recalculate_difficulty() + last_block.difficulty
         IO.puts("Difficulty recalculated! Changed from #{last_block.difficulty} to #{new_difficulty}")
         new_difficulty
@@ -60,7 +60,8 @@ defmodule Miner.LedgerManager do
     case Validator.is_block_valid?(block, difficulty) do
       :ok ->
         # Save the block to our chain since its valid
-        Blockchain.add_block(block)
+        Ledger.append_block(block)
+        Utxo.update_with_transactions(block.transactions)
         :ok
       _err -> :invalid
     end
@@ -150,12 +151,12 @@ defmodule Miner.LedgerManager do
       {fork_chain, fork_source} ->
         # Calculate the difficulty that we were looking for at the time of the
         # fork. First, we need to find the start of the last epoch
-        start_of_last_epoch = fork_source.index - rem(fork_source.index, Blockchain.diff_rebalance_offset())
+        start_of_last_epoch = fork_source.index - rem(fork_source.index, Application.get_env(:elixium_core, :diff_rebalance_offset))
 
         difficulty =
-          if start_of_last_epoch >= Blockchain.diff_rebalance_offset() do
+          if start_of_last_epoch >= Application.get_env(:elixium_core, :diff_rebalance_offset) do
             end_of_prev_epoch = Ledger.block_at_height(start_of_last_epoch)
-            beginning_of_prev_epoch = Ledger.block_at_height(start_of_last_epoch - Blockchain.diff_rebalance_offset())
+            beginning_of_prev_epoch = Ledger.block_at_height(start_of_last_epoch - Application.get_env(:elixium_core, :diff_rebalance_offset))
             Blockchain.recalculate_difficulty(beginning_of_prev_epoch, end_of_prev_epoch)
           else
             fork_source.difficulty
@@ -276,12 +277,12 @@ defmodule Miner.LedgerManager do
   @spec validate_in_context(Block, {Block, list, number, list, list}) :: {Block, list, number, list, list}
   defp validate_in_context(block, {last, pool, difficulty, chain, results}) do
     difficulty =
-      if rem(block.index, Blockchain.diff_rebalance_offset()) == 0 do
+      if rem(block.index, Application.get_env(:elixium_core, :diff_rebalance_offset)) == 0 do
         # Check first to see if the beginning of this epoch was within the fork.
         # If not, get the epoch start block from the canonical chain
         epoch_start =
-          case Enum.find(chain, & &1.index == block.index - Blockchain.diff_rebalance_offset()) do
-            nil -> Ledger.block_at_height(block.index - Blockchain.diff_rebalance_offset())
+          case Enum.find(chain, & &1.index == block.index - Application.get_env(:elixium_core, :diff_rebalance_offset)) do
+            nil -> Ledger.block_at_height(block.index - Application.get_env(:elixium_core, :diff_rebalance_offset))
             block -> block
           end
 

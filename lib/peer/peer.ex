@@ -6,6 +6,7 @@ defmodule Miner.Peer do
   alias Miner.LedgerManager
   alias Miner.BlockCalculator
   alias Elixium.Store.Ledger
+  alias Elixium.Pool.Orphan
 
   def start_link(_args) do
     GenServer.start_link(__MODULE__, [])
@@ -27,7 +28,7 @@ defmodule Miner.Peer do
     Sends a newly mined block to the connection handlers so that it can be
     relayed across the network.
   """
-  @spec distribute_block(Elixium.Blockchain.Block) :: none
+  @spec distribute_block(Elixium.Block) :: none
   def distribute_block(block) do
     Enum.each(Peer.connected_handlers(), &send(&1, {"BLOCK", block}))
   end
@@ -83,7 +84,7 @@ defmodule Miner.Peer do
       # If we have an orphan with an index that is greater than our current latest
       # block, we're likely here trying to rebuild the fork chain and have requested
       # a block that we're missing.
-      # TODO: FETCH BLOCKS 
+      # TODO: FETCH BLOCKS
     end
   end
 
