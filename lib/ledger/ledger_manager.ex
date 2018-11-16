@@ -29,7 +29,7 @@ defmodule Miner.LedgerManager do
 
         # Will only match if the block we received is building directly
         # on the block that we have as the last block in our chain
-        if block.index == last_block.index + 1 && block.previous_hash == last_block.hash do
+        if block.index == 0 || (block.index == last_block.index + 1 && block.previous_hash == last_block.hash) do
           # If this block is positioned as the next block in the chain,
           # validate it as such
           validate_new_block(last_block, block)
@@ -48,17 +48,11 @@ defmodule Miner.LedgerManager do
   @spec validate_new_block(Block, Block) :: :ok | :invalid
   defp validate_new_block(last_block, block) do
     # Recalculate target difficulty if necessary
-    difficulty =
-      if rem(block.index, Application.get_env(:elixium_core, :diff_rebalance_offset)) == 0 do
-        new_difficulty = Blockchain.recalculate_difficulty() + last_block.difficulty
-        IO.puts("Difficulty recalculated! Changed from #{last_block.difficulty} to #{new_difficulty}")
-        new_difficulty
-      else
-        last_block.difficulty
-      end
+    difficulty = Block.calculate_difficulty(block)
 
     case Validator.is_block_valid?(block, difficulty) do
       :ok ->
+        IO.puts "Block #{block.index} valid!"
         # Save the block to our chain since its valid
         Ledger.append_block(block)
         Utxo.update_with_transactions(block.transactions)

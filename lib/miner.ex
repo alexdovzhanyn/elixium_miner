@@ -5,9 +5,7 @@ defmodule Miner do
     Elixium.Store.Ledger.initialize()
 
     # TODO: Make genesis block mined rather than hard-coded
-    if Elixium.Store.Ledger.empty?() do
-      Elixium.Store.Ledger.append_block(Elixium.Block.initialize())
-    else
+    if !Elixium.Store.Ledger.empty?() do
       Elixium.Store.Ledger.hydrate()
     end
 
