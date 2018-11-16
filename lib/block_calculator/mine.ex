@@ -14,8 +14,11 @@ defmodule Miner.BlockCalculator.Mine do
   end
 
   def mine(address) do
-    last_block = Ledger.last_block()
-    block = Block.initialize(last_block)
+    block =
+      case Ledger.last_block() do
+        :err -> Block.initialize()
+        last_block -> Block.initialize(last_block)
+      end
 
     IO.puts "Difficulty: #{block.difficulty}"
 

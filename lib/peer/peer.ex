@@ -140,8 +140,13 @@ defmodule Miner.Peer do
 
       Logger.info("Reconnected to the network! Querying for missed blocks...")
 
-      # Current index minus 120 or 1, whichever is greater.
-      starting_at = max(1, Ledger.last_block().index - 120)
+      starting_at =
+        case Ledger.last_block() do
+          :err -> 0
+          last_block ->
+            # Current index minus 120 or 1, whichever is greater.
+            starting_at = max(1, last_block.index - 120)
+        end
 
       send(handler_pid, {"BLOCK_BATCH_QUERY_REQUEST", %{starting_at: starting_at}})
     end
