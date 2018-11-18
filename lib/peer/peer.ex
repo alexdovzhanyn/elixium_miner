@@ -117,10 +117,12 @@ defmodule Miner.Peer do
     if length(block_query_response.blocks) > 0 do
       Logger.info("Recieved #{length(block_query_response.blocks)} new blocks from peer.")
 
-      Enum.map(block_query_response.blocks, &LedgerManager.handle_new_block/1)
-
-      # Restart the miner to build upon these newly received blocks
-      BlockCalculator.restart_mining()
+      Enum.map(block_query_response.blocks, fn block ->
+        if LedgerManager.handle_new_block(block) == :ok do
+          # Restart the miner to build upon this newly received block
+          BlockCalculator.restart_mining()
+        end
+      end)
     end
 
     {:noreply, state}
@@ -145,7 +147,7 @@ defmodule Miner.Peer do
           :err -> 0
           last_block ->
             # Current index minus 120 or 1, whichever is greater.
-            starting_at = max(1, last_block.index - 120)
+            max(0, last_block.index - 120)
         end
 
       send(handler_pid, {"BLOCK_BATCH_QUERY_REQUEST", %{starting_at: starting_at}})

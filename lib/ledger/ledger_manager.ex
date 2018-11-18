@@ -1,7 +1,6 @@
 defmodule Miner.LedgerManager do
   alias Elixium.Store.Ledger
   alias Elixium.Validator
-  alias Elixium.Blockchain
   alias Elixium.Block
   alias Elixium.Pool.Orphan
   alias Elixium.Store.Utxo
@@ -32,7 +31,7 @@ defmodule Miner.LedgerManager do
         if block.index == 0 || (block.index == last_block.index + 1 && block.previous_hash == last_block.hash) do
           # If this block is positioned as the next block in the chain,
           # validate it as such
-          validate_new_block(last_block, block)
+          validate_new_block(block)
         else
           # Otherwise, check if it's a fork and whether we need to swap to
           # a fork chain
@@ -45,14 +44,13 @@ defmodule Miner.LedgerManager do
 
   # Checks whether a block is valid as the next block in the chain. If it is,
   # adds the block to the chain.
-  @spec validate_new_block(Block, Block) :: :ok | :invalid
-  defp validate_new_block(last_block, block) do
+  @spec validate_new_block(Block) :: :ok | :invalid
+  defp validate_new_block(block) do
     # Recalculate target difficulty if necessary
     difficulty = Block.calculate_difficulty(block)
 
     case Validator.is_block_valid?(block, difficulty) do
       :ok ->
-        IO.puts "Block #{block.index} valid!"
         # Save the block to our chain since its valid
         Ledger.append_block(block)
         Utxo.update_with_transactions(block.transactions)
@@ -85,9 +83,14 @@ defmodule Miner.LedgerManager do
           Orphan.add(block)
           :gossip
         else
-          # Check the orphan pool for blocks at the previous height whose hash this
-          # orphan block references as a previous_hash
-          check_orphan_pool_for_ancestors(block)
+          if block.index == 0 do
+            Orphan.add(block)
+            :gossip
+          else
+            # Check the orphan pool for blocks at the previous height whose hash this
+            # orphan block references as a previous_hash
+            check_orphan_pool_for_ancestors(block)
+          end
         end
     end
   end
@@ -143,85 +146,71 @@ defmodule Miner.LedgerManager do
         Orphan.add(block)
         {:missing_blocks, fork_chain}
       {fork_chain, fork_source} ->
-        # Calculate the difficulty that we were looking for at the time of the
-        # fork. First, we need to find the start of the last epoch
-        start_of_last_epoch = fork_source.index - rem(fork_source.index, Application.get_env(:elixium_core, :diff_rebalance_offset))
+        current_utxos_in_pool = Utxo.retrieve_all_utxos()
 
-        difficulty =
-          if start_of_last_epoch >= Application.get_env(:elixium_core, :diff_rebalance_offset) do
-            end_of_prev_epoch = Ledger.block_at_height(start_of_last_epoch)
-            beginning_of_prev_epoch = Ledger.block_at_height(start_of_last_epoch - Application.get_env(:elixium_core, :diff_rebalance_offset))
-            Blockchain.recalculate_difficulty(beginning_of_prev_epoch, end_of_prev_epoch)
-          else
-            fork_source.difficulty
-          end
+        # Blocks which need to be reversed. (Everything from the block after
+        # the fork source to the current block)
+        blocks_to_reverse =
+          fork_source.index + 1
+          |> Range.new(Ledger.last_block().index)
+          |> Enum.map(&Ledger.block_at_height/1)
 
-          current_utxos_in_pool = Utxo.retrieve_all_utxos()
+        # Find transaction inputs that need to be reversed
+        # TODO: We're looping over blocks_to_reverse twice here (once to parse
+        # inputs and once for outputs). We can likely do this in the same loop.
+        all_canonical_transaction_inputs_since_fork =
+          Enum.flat_map(blocks_to_reverse, &parse_transaction_inputs/1)
 
-          # Blocks which need to be reversed. (Everything from the block after
-          # the fork source to the current block)
-          blocks_to_reverse =
-            fork_source.index + 1
-            |> Range.new(Ledger.last_block().index)
-            |> Enum.map(&Ledger.block_at_height/1)
+        canon_output_txoids =
+          blocks_to_reverse
+          |> Enum.flat_map(&parse_transaction_outputs/1)
+          |> Enum.map(& &1.txoid)
 
-          # Find transaction inputs that need to be reversed
-          # TODO: We're looping over blocks_to_reverse twice here (once to parse
-          # inputs and once for outputs). We can likely do this in the same loop.
-          all_canonical_transaction_inputs_since_fork =
-            Enum.flat_map(blocks_to_reverse, &parse_transaction_inputs/1)
+        # Pool at the time of fork is basically just current pool plus all inputs
+        # used in canon chain since fork, minus all outputs created in after fork
+        # (this will also remove inputs that were created as outputs and used in
+        # the fork)
+        pool =
+          current_utxos_in_pool ++ all_canonical_transaction_inputs_since_fork
+          |> Enum.filter(&(!Enum.member?(canon_output_txoids, &1.txoid)))
 
-          canon_output_txoids =
-            blocks_to_reverse
-            |> Enum.flat_map(&parse_transaction_outputs/1)
-            |> Enum.map(& &1.txoid)
+        # Traverse the fork chain, making sure each block is valid within its own
+        # context.
+        {_, final_contextual_pool, _fork_chain, validation_results} =
+          fork_chain
+          |> Enum.scan({fork_source, pool, fork_chain, []}, &validate_in_context/2)
+          |> List.last()
 
-          # Pool at the time of fork is basically just current pool plus all inputs
-          # used in canon chain since fork, minus all outputs created in after fork
-          # (this will also remove inputs that were created as outputs and used in
-          # the fork)
-          pool =
-            current_utxos_in_pool ++ all_canonical_transaction_inputs_since_fork
-            |> Enum.filter(&(!Enum.member?(canon_output_txoids, &1.txoid)))
+        # Ensure that every block passed validation
+        if Enum.all?(validation_results, & &1) do
+          Logger.info("Candidate fork chain valid. Switching.")
 
-          # Traverse the fork chain, making sure each block is valid within its own
-          # context.
-          {_, final_contextual_pool, _difficulty, _fork_chain, validation_results} =
-            fork_chain
-            |> Enum.scan({fork_source, pool, difficulty, fork_chain, []}, &validate_in_context/2)
-            |> List.last()
+          # Add everything in final_contextual_pool that is not also in current_utxos_in_pool
+          Enum.each(final_contextual_pool -- current_utxos_in_pool, &Utxo.add_utxo/1)
 
-          # Ensure that every block passed validation
-          if Enum.all?(validation_results, & &1) do
-            Logger.info("Candidate fork chain valid. Switching.")
+          # Remove everything in current_utxos_in_pool that is not also in final_contextual_pool
+          current_utxos_in_pool -- final_contextual_pool
+          |> Enum.map(& &1.txoid)
+          |> Enum.each(&Utxo.remove_utxo/1)
 
-            # Add everything in final_contextual_pool that is not also in current_utxos_in_pool
-            Enum.each(final_contextual_pool -- current_utxos_in_pool, &Utxo.add_utxo/1)
+          # Drop canon chain blocks from the ledger, add them to the orphan pool
+          # in case the chain gets revived by another miner
+          Enum.each(blocks_to_reverse, fn blk ->
+            Orphan.add(blk)
+            Ledger.drop_block(blk)
+          end)
 
-            # Remove everything in current_utxos_in_pool that is not also in final_contextual_pool
-            current_utxos_in_pool -- final_contextual_pool
-            |> Enum.map(& &1.txoid)
-            |> Enum.each(&Utxo.remove_utxo/1)
+          # Remove fork chain from orphan pool; now it becomes the canon chain,
+          # so we add its blocks to the ledger
+          Enum.each(fork_chain, fn blk ->
+            Ledger.append_block(blk)
+            Orphan.remove(blk)
+          end)
 
-            # Drop canon chain blocks from the ledger, add them to the orphan pool
-            # in case the chain gets revived by another miner
-            Enum.each(blocks_to_reverse, fn blk ->
-              Orphan.add(blk)
-              Ledger.drop_block(blk)
-            end)
-
-            # Remove fork chain from orphan pool; now it becomes the canon chain,
-            # so we add its blocks to the ledger
-            Enum.each(fork_chain, fn blk ->
-              Ledger.append_block(blk)
-              Orphan.remove(blk)
-            end)
-
-            :ok
-          else
-            Logger.info("Evaluated candidate fork chain. Not viable for switch.")
-            :ignore
-          end
+          :ok
+        else
+          :ignore
+        end
 
       _ -> :ignore
     end
@@ -229,12 +218,18 @@ defmodule Miner.LedgerManager do
 
   # Recursively loops through the orphan pool to build a fork chain as long as
   # we can, based on a given block.
-  @spec rebuild_fork_chain(list) :: list | {:missing_blocks, list}
+  @spec rebuild_fork_chain(list) :: {list, Block} | {:missing_blocks, list}
   defp rebuild_fork_chain(chain) when is_list(chain) do
     case Orphan.blocks_at_height(hd(chain).index - 1) do
       [] ->
-        Logger.warn("Tried rebuilding fork chain, but was unable to find an ancestor.")
-        {:missing_blocks, chain}
+        # If index is 0, we've forked back to the genesis block. Let's start
+        # validating
+        if hd(chain).index == 0 do
+          {chain, hd(chain)}
+        else
+          Logger.warn("Tried rebuilding fork chain, but was unable to find an ancestor.")
+          {:missing_blocks, chain}
+        end
       orphan_blocks ->
         orphan_blocks
         |> Enum.filter(fn {_, block} -> block.hash == hd(chain).previous_hash end)
@@ -268,24 +263,31 @@ defmodule Miner.LedgerManager do
   # pool will be used as the utxo pool, the provided chain will be used as a
   # faux canonical chain. Results is an array of blocks that have been previously
   # validated using this function.
-  @spec validate_in_context(Block, {Block, list, number, list, list}) :: {Block, list, number, list, list}
-  defp validate_in_context(block, {last, pool, difficulty, chain, results}) do
-    difficulty =
-      if rem(block.index, Application.get_env(:elixium_core, :diff_rebalance_offset)) == 0 do
-        # Check first to see if the beginning of this epoch was within the fork.
-        # If not, get the epoch start block from the canonical chain
-        epoch_start =
-          case Enum.find(chain, & &1.index == block.index - Application.get_env(:elixium_core, :diff_rebalance_offset)) do
-            nil -> Ledger.block_at_height(block.index - Application.get_env(:elixium_core, :diff_rebalance_offset))
-            block -> block
-          end
+  @spec validate_in_context(Block, {Block, list, list, list}) :: {Block, list, list, list}
+  defp validate_in_context(block, {last, pool, chain, results}) do
+    retargeting_window = Application.get_env(:elixium_core, :retargeting_window)
 
-        Blockchain.recalculate_difficulty(epoch_start, block) + last.difficulty
+    curr_index_in_fork = Enum.find_index(chain, &(&1 == block))
+
+    blocks_from_canon =
+      if curr_index_in_fork < 60 do
+        to_get = retargeting_window - curr_index_in_fork
+
+        Ledger.last_n_blocks(to_get, hd(chain).index - 1)
       else
-        difficulty
+        []
       end
 
-    valid = :ok == Validator.is_block_valid?(block, difficulty, last, &(pool_check(pool, &1)))
+    blocks_from_fork = Enum.take(chain, curr_index_in_fork - 1)
+
+    difficulty = Block.calculate_difficulty(block, blocks_from_canon ++ blocks_from_fork)
+
+    valid =
+      if block.index == 0 do
+        :ok == Validator.is_block_valid?(block, difficulty)
+      else
+        :ok == Validator.is_block_valid?(block, difficulty, last, &(pool_check(pool, &1)))
+      end
 
     # Update the contextual utxo pool by removing spent inputs and adding
     # unspent outputs from this block. The following block will use the updated
@@ -308,7 +310,7 @@ defmodule Miner.LedgerManager do
         pool
       end
 
-    {block, updated_pool, difficulty, chain, [valid | results]}
+    {block, updated_pool, chain, [valid | results]}
   end
 
   # Function that gets passed to Validator.is_block_valid?/3, telling it how to
