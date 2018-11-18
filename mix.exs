@@ -15,7 +15,13 @@ defmodule Miner.Mixfile do
   def application do
     [
       mod: {Miner, []},
-      extra_applications: [:logger, :elixium_core]
+      extra_applications: [
+        :ssl,
+        :logger,
+        :inets,
+        :crypto,
+        :elixium_core
+      ]
     ]
   end
 
@@ -24,7 +30,8 @@ defmodule Miner.Mixfile do
     [
       {:elixium_core, "~> 0.1"},
       {:decimal, "~> 1.0"},
-      {:poison, "~> 3.1"}
+      {:poison, "~> 3.1"},
+      {:distillery, "~> 2.0"}
     ]
   end
 end

@@ -97,7 +97,7 @@ defmodule Miner.Peer do
     last_block = Ledger.last_block()
 
     blocks =
-      if block_query_request.starting_at <= last_block.index do
+      if last_block != :err && block_query_request.starting_at <= last_block.index do
         block_query_request.starting_at
         |> Range.new(last_block.index)
         |> Enum.map(&Ledger.block_at_height/1)
