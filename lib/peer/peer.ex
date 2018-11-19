@@ -164,10 +164,10 @@ defmodule Miner.Peer do
     {:noreply, state}
   end
 
-  def handle_info({%type: "PEER_QUERY_REQUEST", handler_pid}, state) do
+  def handle_info({%{type: "PEER_QUERY_REQUEST"}, handler_pid}, state) do
     peers =
       :"Elixir.Elixium.Store.PeerOracle"
-      |> GenServer.call({:save_known_peer, [peer]})
+      |> GenServer.call({:load_known_peers, []})
       |> Enum.take(8)
 
     send(handler_pid, {"PEER_QUERY_RESPONSE", %{peers: peers}})
