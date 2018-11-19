@@ -153,6 +153,33 @@ defmodule Miner.Peer do
       send(handler_pid, {"BLOCK_BATCH_QUERY_REQUEST", %{starting_at: starting_at}})
     end
 
+    send(handler_pid, {"PEER_QUERY_REQUEST", %{}})
+
+    {:noreply, state}
+  end
+
+  def handle_info({:new_inbound_connection, handler_pid}, state) do
+    send(handler_pid, {"PEER_QUERY_REQUEST", %{}})
+
+    {:noreply, state}
+  end
+
+  def handle_info({%type: "PEER_QUERY_REQUEST", handler_pid}, state) do
+    peers =
+      :"Elixir.Elixium.Store.PeerOracle"
+      |> GenServer.call({:save_known_peer, [peer]})
+      |> Enum.take(8)
+
+    send(handler_pid, {"PEER_QUERY_RESPONSE", %{peers: peers}})
+
+    {:noreply, state}
+  end
+
+  def handle_info({%{type: "PEER_QUERY_RESPONSE", peers: peers}, _caller}, state) do
+    Enum.each(peers, fn peer ->
+      GenServer.call(:"Elixir.Elixium.Store.PeerOracle", {:save_known_peer, [peer]})
+    end)
+
     {:noreply, state}
   end
 
