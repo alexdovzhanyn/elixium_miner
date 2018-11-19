@@ -20,8 +20,6 @@ defmodule Miner.BlockCalculator.Mine do
         last_block -> Block.initialize(last_block)
       end
 
-    IO.puts "Difficulty: #{block.difficulty}"
-
     Logger.info("Mining block at index #{block.index}...")
 
     mined_block =
@@ -31,11 +29,7 @@ defmodule Miner.BlockCalculator.Mine do
       |> merge_block(block)
       |> Block.mine()
 
-    IO.puts "Hash: #{mined_block.hash}"
-
     Logger.info("Calculated hash for block at index #{block.index}.")
-
-    IO.puts "Took #{(DateTime.utc_now() |> DateTime.to_unix) - block.timestamp} seconds."
 
     BlockCalculator.finished_mining(mined_block)
   end
