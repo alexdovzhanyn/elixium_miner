@@ -25,10 +25,12 @@ defmodule Miner.LedgerManager do
     case Ledger.block_at_height(block.index) do
       :none ->
         last_block = Ledger.last_block()
+        block_index = :binary.decode_unsigned(block.index)
+        last_block_index = :binary.decode_unsigned(last_block.index)
 
         # Will only match if the block we received is building directly
         # on the block that we have as the last block in our chain
-        if block.index == 0 || (block.index == last_block.index + 1 && block.previous_hash == last_block.hash) do
+        if block_index == 0 || (block_index == last_block_index + 1 && block.previous_hash == last_block.hash) do
           # If this block is positioned as the next block in the chain,
           # validate it as such
           validate_new_block(block)
@@ -64,7 +66,7 @@ defmodule Miner.LedgerManager do
   # the peer should gossip about this block.
   @spec handle_possible_fork(Block, Block) :: :gossip | :ignore
   defp handle_possible_fork(block, existing_block) do
-    Logger.info("Already have a block with index #{existing_block.index}. Performing block diff...")
+    Logger.info("Already have a block with index #{:binary.decode_unsigned(existing_block.index)}. Performing block diff...")
 
     case Block.diff_header(existing_block, block) do
       [] ->
@@ -75,15 +77,18 @@ defmodule Miner.LedgerManager do
       _diff ->
         Logger.warn("Fork block received! Checking existing orphan pool...")
 
+        last_block_index = :binary.decode_unsigned(Ledger.last_block().index)
+        block_index = :binary.decode_unsigned(block.index)
+
         # TODO: Should this look at previous_hash as well?
-        if Ledger.last_block().index == block.index do
+        if last_block_index == block_index do
           # This block is a fork of the current latest block in the pool. Add it
           # to our orphan pool and tell the peer to gossip the block.
           Logger.warn("Received fork of current block.")
           Orphan.add(block)
           :gossip
         else
-          if block.index == 0 do
+          if block_index == 0 do
             Orphan.add(block)
             :gossip
           else
@@ -98,7 +103,7 @@ defmodule Miner.LedgerManager do
   # Checks the orphan pool for blocks with a common previous index or previous_hash
   @spec check_orphan_pool_for_ancestors(Block) :: :gossip | :ignore
   defp check_orphan_pool_for_ancestors(block) do
-    case Orphan.blocks_at_height(block.index - 1) do
+    case Orphan.blocks_at_height(:binary.decode_unsigned(block.index) - 1) do
       [] ->
         # We don't know of any ORPHAN blocks that this block might be referencing.
         # Perhaps this is a fork of a block that we've accepted as canonical
@@ -151,8 +156,10 @@ defmodule Miner.LedgerManager do
         # Blocks which need to be reversed. (Everything from the block after
         # the fork source to the current block)
         blocks_to_reverse =
-          fork_source.index + 1
-          |> Range.new(Ledger.last_block().index)
+          fork_source.index
+          |> :binary.decode_unsigned()
+          |> Kernel.+(1)
+          |> Range.new(:binary.decode_unsigned(Ledger.last_block().index))
           |> Enum.map(&Ledger.block_at_height/1)
 
         # Find transaction inputs that need to be reversed
@@ -220,11 +227,11 @@ defmodule Miner.LedgerManager do
   # we can, based on a given block.
   @spec rebuild_fork_chain(list) :: {list, Block} | {:missing_blocks, list}
   defp rebuild_fork_chain(chain) when is_list(chain) do
-    case Orphan.blocks_at_height(hd(chain).index - 1) do
+    case Orphan.blocks_at_height(:binary.decode_unsigned(hd(chain).index) - 1) do
       [] ->
         # If index is 0, we've forked back to the genesis block. Let's start
         # validating
-        if hd(chain).index == 0 do
+        if :binary.decode_unsigned(hd(chain).index) == 0 do
           {chain, hd(chain)}
         else
           Logger.warn("Tried rebuilding fork chain, but was unable to find an ancestor.")
@@ -273,7 +280,7 @@ defmodule Miner.LedgerManager do
       if curr_index_in_fork < 60 do
         to_get = retargeting_window - curr_index_in_fork
 
-        Ledger.last_n_blocks(to_get, hd(chain).index - 1)
+        Ledger.last_n_blocks(to_get, :binary.decode_unsigned(hd(chain).index) - 1)
       else
         []
       end
@@ -283,7 +290,7 @@ defmodule Miner.LedgerManager do
     difficulty = Block.calculate_difficulty(block, blocks_from_canon ++ blocks_from_fork)
 
     valid =
-      if block.index == 0 do
+      if :binary.decode_unsigned(block.index) == 0 do
         :ok == Validator.is_block_valid?(block, difficulty)
       else
         :ok == Validator.is_block_valid?(block, difficulty, last, &(pool_check(pool, &1)))

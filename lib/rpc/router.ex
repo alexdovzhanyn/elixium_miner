@@ -53,8 +53,13 @@ defmodule Miner.RPC.Router do
   @doc """
     Converts binary data within a block to its non-binary equivalent
   """
-  def nonbinary_block(%{nonce: nonce} = block) do
-    %{block | nonce: :binary.decode_unsigned(nonce)}
+  def nonbinary_block(block) do
+    %{
+      block |
+      nonce: :binary.decode_unsigned(block.nonce),
+      version: :binary.decode_unsigned(block.version),
+      index: :binary.decode_unsigned(block.index)
+    }
   end
 
 end

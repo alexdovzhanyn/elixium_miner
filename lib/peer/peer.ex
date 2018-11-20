@@ -40,7 +40,7 @@ defmodule Miner.Peer do
         # We've received a valid block. We need to stop mining the block we're
         # currently working on and start mining the new one. We also need to gossip
         # this block to all the nodes we know of.
-        Logger.info("Received valid block (#{block.hash}) at index #{block.index}.")
+        Logger.info("Received valid block (#{block.hash}) at index #{:binary.decode_unsigned(block.index)}.")
 
         Peer.gossip("BLOCK", block)
         Logger.info("Gossipped block #{block.hash} to peers.")
@@ -57,9 +57,9 @@ defmodule Miner.Peer do
       {:missing_blocks, fork_chain} ->
         # We've discovered a fork, but we can't rebuild the fork chain without
         # some blocks. Let's request them from our peer.
-        query_block(hd(fork_chain).index - 1, caller)
+        query_block(:binary.decode_unsigned(hd(fork_chain).index) - 1, caller)
       :ignore -> :ignore # We already know of this block. Ignore it
-      :invalid -> Logger.info("Recieved invalid block at index #{block.index}.")
+      :invalid -> Logger.info("Recieved invalid block at index #{:binary.decode_unsigned(block.index)}.")
     end
 
     {:noreply, state}
@@ -68,7 +68,9 @@ defmodule Miner.Peer do
   def handle_info({block_query_request = %{type: "BLOCK_QUERY_REQUEST"}, caller}, state) do
     send(caller, {
       "BLOCK_QUERY_RESPONSE",
-      Ledger.block_at_height(block_query_request.index)
+      block_query_request.index
+      |> :binary.decode_unsigned()
+      |> Ledger.block_at_height()
     })
 
     {:noreply, state}
@@ -76,7 +78,9 @@ defmodule Miner.Peer do
 
   def handle_info({block_query_response = %{type: "BLOCK_QUERY_RESPONSE"}, _caller}, state) do
     orphans_ahead =
-      Ledger.last_block().index + 1
+      Ledger.last_block().index
+      |> :binary.decode_unsigned()
+      |> Kernel.+(1)
       |> Orphan.blocks_at_height()
       |> length()
 
@@ -95,11 +99,12 @@ defmodule Miner.Peer do
     # high amount of blocks. Need to figure out a better way to do this; maybe
     # we need to limit the maximum amount of blocks a peer is allowed to request.
     last_block = Ledger.last_block()
+    last_block_index = :binary.decode_unsigned(last_block.index)
 
     blocks =
-      if last_block != :err && block_query_request.starting_at <= last_block.index do
+      if last_block != :err && block_query_request.starting_at <= last_block_index do
         block_query_request.starting_at
-        |> Range.new(last_block.index)
+        |> Range.new(last_block_index)
         |> Enum.map(&Ledger.block_at_height/1)
         |> Enum.filter(&(&1 != :none))
       else
@@ -147,7 +152,7 @@ defmodule Miner.Peer do
           :err -> 0
           last_block ->
             # Current index minus 120 or 1, whichever is greater.
-            max(0, last_block.index - 120)
+            max(0, :binary.decode_unsigned(last_block.index) - 120)
         end
 
       send(handler_pid, {"BLOCK_BATCH_QUERY_REQUEST", %{starting_at: starting_at}})

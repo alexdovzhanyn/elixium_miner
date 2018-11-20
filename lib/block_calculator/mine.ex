@@ -20,7 +20,7 @@ defmodule Miner.BlockCalculator.Mine do
         last_block -> Block.initialize(last_block)
       end
 
-    Logger.info("Mining block at index #{block.index}...")
+    Logger.info("Mining block at index #{:binary.decode_unsigned(block.index)}...")
 
     mined_block =
       block
@@ -29,14 +29,15 @@ defmodule Miner.BlockCalculator.Mine do
       |> merge_block(block)
       |> Block.mine()
 
-    Logger.info("Calculated hash for block at index #{block.index}.")
+    Logger.info("Calculated hash for block at index #{:binary.decode_unsigned(block.index)}.")
 
     BlockCalculator.finished_mining(mined_block)
   end
 
   @spec calculate_coinbase_amount(Block) :: Decimal
   defp calculate_coinbase_amount(block) do
-    D.add(Block.calculate_block_reward(block.index), Block.total_block_fees(block.transactions))
+    index = :binary.decode_unsigned(block.index)
+    D.add(Block.calculate_block_reward(index), Block.total_block_fees(block.transactions))
   end
 
   defp merge_block(coinbase, block) do

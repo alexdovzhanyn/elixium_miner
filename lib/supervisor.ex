@@ -8,7 +8,7 @@ defmodule Miner.Supervisor do
   def init(_args) do
     children = [
       Miner.BlockCalculator.Supervisor,
-      Miner.Peer.Supervisor,
+      Miner.Peer.Supervisor
     ]
 
     children =
