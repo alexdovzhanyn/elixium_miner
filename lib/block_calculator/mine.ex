@@ -1,7 +1,6 @@
 defmodule Miner.BlockCalculator.Mine do
   use Task
   alias Miner.BlockCalculator
-  alias Elixium.Blockchain
   alias Elixium.Block
   alias Elixium.Store.Ledger
   alias Elixium.Transaction
