@@ -8,16 +8,18 @@ defmodule Miner.BlockCalculator.Mine do
   alias Elixium.Utilities
   require Logger
 
-  def start(address) do
-    Task.start(__MODULE__, :mine, [address])
+  def start(address, transactions) do
+    Task.start(__MODULE__, :mine, [address, transactions])
   end
 
-  def mine(address) do
+  def mine(address, transactions) do
     block =
       case Ledger.last_block() do
         :err -> Block.initialize()
         last_block -> Block.initialize(last_block)
       end
+
+    block = Map.put(block, :transactions, transactions)
 
     Logger.info("Mining block at index #{:binary.decode_unsigned(block.index)}...")
 

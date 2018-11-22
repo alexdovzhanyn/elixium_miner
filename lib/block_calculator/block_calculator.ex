@@ -8,13 +8,14 @@ defmodule Miner.BlockCalculator do
   alias Elixium.Store.Ledger
   alias Elixium.Store.Utxo
   alias Elixium.Error
+  alias Decimal, as: D
 
   def start_link(address) do
     GenServer.start_link(__MODULE__, address, name: __MODULE__)
   end
 
   def init(address) do
-    {:ok, %{address: address}}
+    {:ok, %{address: address, transactions: []}}
   end
 
   @doc """
@@ -53,6 +54,10 @@ defmodule Miner.BlockCalculator do
     GenServer.cast(__MODULE__, :restart)
   end
 
+  def add_tx_to_pool(tx) do
+    GenServer.cast(__MODULE__, {:add_transaction_to_pool, tx})
+  end
+
   def handle_cast(:interrupt, state) do
     Process.exit(state.mine_task, :mine_interrupt)
     Logger.info("Interrupted mining of current block.")
@@ -62,7 +67,7 @@ defmodule Miner.BlockCalculator do
   end
 
   def handle_cast(:start, state) do
-    {:ok, pid} = Mine.start(state.address)
+    {:ok, pid} = Mine.start(state.address, find_favorable_transactions(state.transactions))
 
     state = Map.put(state, :mine_task, pid)
     {:noreply, state}
@@ -72,7 +77,7 @@ defmodule Miner.BlockCalculator do
     Process.exit(state.mine_task, :mine_interrupt)
     Logger.info("Interrupted mining of current block.")
 
-    {:ok, pid} = Mine.start(state.address)
+    {:ok, pid} = Mine.start(state.address, find_favorable_transactions(state.transactions))
 
     state = Map.put(state, :mine_task, pid)
     {:noreply, state}
@@ -97,5 +102,65 @@ defmodule Miner.BlockCalculator do
     end
 
     {:noreply, state}
+  end
+
+  def handle_cast({:add_transaction_to_pool, transaction}, state) do
+    # Check if we've already received a transaction that has a utxo that is
+    # being used within this transaction. We'll ignore this transaction if we
+    # have, since this would be a double spend
+    inputs_in_pool? =
+      state.transactions
+      |> Enum.flat_map(& &1.inputs)
+      |> Enum.any?(fn pool_utxo ->
+        Enum.any?(transaction.inputs, & &1 == pool_utxo)
+      end)
+
+    state =
+      if !inputs_in_pool? do
+        %{state | transactions: [transaction | state.transactions]}
+      else
+        state
+      end
+
+    {:noreply, state}
+  end
+
+  def handle_cast({:remove_transactions_from_pool, transactions}, state) do
+    transactions = state.transactions -- transactions
+
+    {:noreply, %{state | transactions: transactions}}
+  end
+
+  defp find_favorable_transactions(transaction_pool) do
+    block_size_limit = Application.get_env(:elixium_core, :block_size_limit)
+    header_size = 224
+    coinbase_size = 500 # Varies, but 500 is the maximum size it will be.
+
+    remaining_space = block_size_limit - header_size - coinbase_size
+
+    txs =
+      transaction_pool
+      |> Enum.sort(& D.cmp(Transaction.calculate_fee(&1), Transaction.calculate_fee(&2)) == :gt || D.cmp(&1.amount, &2.amount) == :eq)
+      |> fit_transactions([], remaining_space)
+
+    GenServer.cast(__MODULE__, {:remove_transactions_from_pool, txs})
+
+    txs
+  end
+
+  # Fits as many transactions as possible into the block
+  defp fit_transactions([], transactions, remaining_space), do: transactions
+
+  defp fit_transactions([transaction | remaining_transactions], transactions, remaining_space) do
+    tx_bytes =
+      transaction
+      |> :erlang.term_to_binary()
+      |> byte_size()
+
+    if remaining_space >= tx_bytes do
+      fit_transactions(remaining_transactions, [transaction | transactions], remaining_space - tx_bytes)
+    else
+      fit_transactions(remaining_transactions, transactions, remaining_space)
+    end
   end
 end

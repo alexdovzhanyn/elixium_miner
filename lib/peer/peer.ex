@@ -7,6 +7,9 @@ defmodule Miner.Peer do
   alias Miner.BlockCalculator
   alias Elixium.Store.Ledger
   alias Elixium.Pool.Orphan
+  alias Elixium.Block
+  alias Elixium.Transaction
+  alias Elixium.Validator
 
   def start_link(_args) do
     GenServer.start_link(__MODULE__, [])
@@ -35,13 +38,15 @@ defmodule Miner.Peer do
 
   # Handles recieved blocks
   def handle_info({block = %{type: "BLOCK"}, caller}, state) do
+    block = Block.sanitize(block)
+
     case LedgerManager.handle_new_block(block) do
       :ok ->
         # We've received a valid block. We need to stop mining the block we're
         # currently working on and start mining the new one. We also need to gossip
         # this block to all the nodes we know of.
         Logger.info("Received valid block (#{block.hash}) at index #{:binary.decode_unsigned(block.index)}.")
-
+        IO.inspect block
         Peer.gossip("BLOCK", block)
         Logger.info("Gossipped block #{block.hash} to peers.")
 
@@ -123,6 +128,8 @@ defmodule Miner.Peer do
       Logger.info("Recieved #{length(block_query_response.blocks)} new blocks from peer.")
 
       Enum.map(block_query_response.blocks, fn block ->
+        block = Block.sanitize(block)
+
         if LedgerManager.handle_new_block(block) == :ok do
           # Restart the miner to build upon this newly received block
           BlockCalculator.restart_mining()
@@ -134,6 +141,14 @@ defmodule Miner.Peer do
   end
 
   def handle_info({transaction = %{type: "TRANSACTION"}, _caller}, state) do
+    transaction = Transaction.sanitize(transaction)
+
+    if Validator.valid_transaction?(transaction) do
+      BlockCalculator.add_tx_to_pool(transaction)
+    else
+      Logger.info("Received Invalid Transaction. Ignoring.")
+    end
+
     {:noreply, state}
   end
 
