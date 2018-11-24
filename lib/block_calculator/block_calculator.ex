@@ -5,6 +5,7 @@ defmodule Miner.BlockCalculator do
   alias Miner.BlockCalculator.Mine
   alias Miner.Peer
   alias Elixium.Validator
+  alias Elixium.Transaction
   alias Elixium.Store.Ledger
   alias Elixium.Store.Utxo
   alias Elixium.Error
@@ -134,13 +135,16 @@ defmodule Miner.BlockCalculator do
   defp find_favorable_transactions(transaction_pool) do
     block_size_limit = Application.get_env(:elixium_core, :block_size_limit)
     header_size = 224
-    coinbase_size = 500 # Varies, but 500 is the maximum size it will be.
+
+    # Varies, but 500 is the maximum size it will be. We should look into a way
+    # of getting the exact size.
+    coinbase_size = 500
 
     remaining_space = block_size_limit - header_size - coinbase_size
 
     txs =
       transaction_pool
-      |> Enum.sort(& D.cmp(Transaction.calculate_fee(&1), Transaction.calculate_fee(&2)) == :gt || D.cmp(&1.amount, &2.amount) == :eq)
+      |> Enum.sort(& D.cmp(Transaction.calculate_fee(&1), Transaction.calculate_fee(&2)) == :gt || D.cmp(Transaction.calculate_fee(&1), Transaction.calculate_fee(&2)) == :eq)
       |> fit_transactions([], remaining_space)
 
     GenServer.cast(__MODULE__, {:remove_transactions_from_pool, txs})
