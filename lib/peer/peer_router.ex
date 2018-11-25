@@ -98,12 +98,11 @@ defmodule Miner.PeerRouter do
     # high amount of blocks. Need to figure out a better way to do this; maybe
     # we need to limit the maximum amount of blocks a peer is allowed to request.
     last_block = Ledger.last_block()
-    last_block_index = :binary.decode_unsigned(last_block.index)
 
     blocks =
-      if last_block != :err && block_query_request.starting_at <= last_block_index do
+      if last_block != :err && block_query_request.starting_at <= :binary.decode_unsigned(last_block.index) do
         block_query_request.starting_at
-        |> Range.new(last_block_index)
+        |> Range.new(:binary.decode_unsigned(last_block.index))
         |> Enum.map(&Ledger.block_at_height/1)
         |> Enum.filter(&(&1 != :none))
       else
@@ -149,25 +148,22 @@ defmodule Miner.PeerRouter do
   end
 
   def handle_info({:new_outbound_connection, handler_pid}, state) do
-    if length(Peer.connected_handlers()) == 1 do
-      # We just went from 0 connections to 1 connection. This indicates that we've
-      # likely just joined the network. Let's ask our peer for new blocks, if there
-      # are any. We'll ask for all blocks starting from our current index minus
-      # 120 (4 hours worth of blocks before we disconnected) just in case there
-      # was a fork after we disconnected.
+    # Let's ask our peer for new blocks, if there
+    # are any. We'll ask for all blocks starting from our current index minus
+    # 120 (4 hours worth of blocks before we disconnected) just in case there
+    # was a fork after we disconnected.
 
-      Logger.info("Reconnected to the network! Querying for missed blocks...")
+    Logger.info("Querying new peer for missed blocks...")
 
-      starting_at =
-        case Ledger.last_block() do
-          :err -> 0
-          last_block ->
-            # Current index minus 120 or 1, whichever is greater.
-            max(0, :binary.decode_unsigned(last_block.index) - 120)
-        end
+    starting_at =
+      case Ledger.last_block() do
+        :err -> 0
+        last_block ->
+          # Current index minus 120 or 1, whichever is greater.
+          max(0, :binary.decode_unsigned(last_block.index) - 120)
+      end
 
-      send(handler_pid, {"BLOCK_BATCH_QUERY_REQUEST", %{starting_at: starting_at}})
-    end
+    send(handler_pid, {"BLOCK_BATCH_QUERY_REQUEST", %{starting_at: starting_at}})
 
     send(handler_pid, {"PEER_QUERY_REQUEST", %{}})
 
