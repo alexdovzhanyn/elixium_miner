@@ -6,9 +6,7 @@ defmodule Miner.PeerRouter.Supervisor do
   end
 
   def init(_args) do
-    children = [
-      Miner.PeerRouter
-    ]
+    children = [Miner.PeerRouter]
 
     Supervisor.init(children, strategy: :one_for_one)
   end
