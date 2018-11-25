@@ -40,7 +40,6 @@ defmodule Miner.PeerRouter do
         # currently working on and start mining the new one. We also need to gossip
         # this block to all the nodes we know of.
         Logger.info("Received valid block (#{block.hash}) at index #{:binary.decode_unsigned(block.index)}.")
-        IO.inspect block
         Peer.gossip("BLOCK", block)
         Logger.info("Gossipped block #{block.hash} to peers.")
 
