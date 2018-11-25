@@ -4,7 +4,6 @@ defmodule Miner.RPC do
   require Logger
 
   def start_link(_args) do
-    Logger.info("Starting RPC through TCP...")
     {:ok, socket} = :gen_tcp.listen(32123, packet: :http, active: true, exit_on_close: false)
     GenServer.start_link(__MODULE__, socket, name: __MODULE__)
   end

@@ -3,7 +3,7 @@ defmodule Miner.BlockCalculator do
   require IEx
   require Logger
   alias Miner.BlockCalculator.Mine
-  alias Miner.Peer
+  alias Miner.PeerRouter
   alias Elixium.Validator
   alias Elixium.Transaction
   alias Elixium.Store.Ledger
@@ -89,7 +89,7 @@ defmodule Miner.BlockCalculator do
       :ok ->
         Ledger.append_block(block)
         Utxo.update_with_transactions(block.transactions)
-        Peer.distribute_block(block)
+        PeerRouter.distribute_block(block)
         start_mining()
 
       err ->

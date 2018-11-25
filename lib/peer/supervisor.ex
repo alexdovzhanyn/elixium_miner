@@ -1,4 +1,4 @@
-defmodule Miner.Peer.Supervisor do
+defmodule Miner.PeerRouter.Supervisor do
   use Supervisor
 
   def start_link(_args) do
@@ -7,7 +7,7 @@ defmodule Miner.Peer.Supervisor do
 
   def init(_args) do
     children = [
-      Miner.Peer
+      Miner.PeerRouter
     ]
 
     Supervisor.init(children, strategy: :one_for_one)

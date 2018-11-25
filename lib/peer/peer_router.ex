@@ -1,8 +1,8 @@
-defmodule Miner.Peer do
+defmodule Miner.PeerRouter do
   use GenServer
   require Logger
   require IEx
-  alias Elixium.P2P.Peer
+  alias Elixium.Node.Supervisor, as: Peer
   alias Miner.LedgerManager
   alias Miner.BlockCalculator
   alias Elixium.Store.Ledger
@@ -12,16 +12,10 @@ defmodule Miner.Peer do
   alias Elixium.Validator
 
   def start_link(_args) do
-    GenServer.start_link(__MODULE__, [])
+    GenServer.start_link(__MODULE__, [], name: __MODULE__)
   end
 
   def init(_args) do
-    if port = Application.get_env(:elixium_miner, :port) do
-      Peer.initialize(port)
-    else
-      Peer.initialize()
-    end
-
     BlockCalculator.start_mining()
 
     {:ok, []}
@@ -143,6 +137,8 @@ defmodule Miner.Peer do
   def handle_info({transaction = %{type: "TRANSACTION"}, _caller}, state) do
     transaction = Transaction.sanitize(transaction)
 
+    IO.inspect(transaction.id, label: "New transaction")
+
     if Validator.valid_transaction?(transaction) do
       BlockCalculator.add_tx_to_pool(transaction)
     else
@@ -209,5 +205,5 @@ defmodule Miner.Peer do
     {:noreply, state}
   end
 
-  def query_block(index, caller), do: send(caller, {"BLOCK_QUERY_REQUEST", index: index})
+  def query_block(index, caller), do: send(caller, {"BLOCK_QUERY_REQUEST", %{index: index}})
 end

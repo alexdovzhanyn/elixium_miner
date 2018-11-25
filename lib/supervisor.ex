@@ -6,9 +6,12 @@ defmodule Miner.Supervisor do
   end
 
   def init(_args) do
+    port = Application.get_env(:elixium_miner, :port)
+
     children = [
+      {Elixium.Node.Supervisor, [:"Elixir.Miner.PeerRouter", port]},
       Miner.BlockCalculator.Supervisor,
-      Miner.Peer.Supervisor
+      Miner.PeerRouter.Supervisor
     ]
 
     children =
