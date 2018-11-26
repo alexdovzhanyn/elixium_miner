@@ -54,12 +54,24 @@ defmodule Miner.RPC.Router do
     Converts binary data within a block to its non-binary equivalent
   """
   def nonbinary_block(block) do
-    %{
+    b = %{
       block |
       nonce: :binary.decode_unsigned(block.nonce),
       version: :binary.decode_unsigned(block.version),
       index: :binary.decode_unsigned(block.index)
     }
+
+    transactions = Enum.map(block.transactions, fn tx ->
+      if Map.has_key?(tx, :sigs) do
+        sigs = Enum.map(tx.sigs, fn {addr, sig} -> [addr, Base.encode64(sig)] end)
+
+        Map.put(tx, :sigs, sigs)
+      else
+        tx
+      end
+    end)
+
+    Map.put(b, :transactions, transactions)
   end
 
 end

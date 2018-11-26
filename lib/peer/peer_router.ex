@@ -64,12 +64,7 @@ defmodule Miner.PeerRouter do
   end
 
   def handle_info({block_query_request = %{type: "BLOCK_QUERY_REQUEST"}, caller}, state) do
-    send(caller, {
-      "BLOCK_QUERY_RESPONSE",
-      block_query_request.index
-      |> :binary.decode_unsigned()
-      |> Ledger.block_at_height()
-    })
+    send(caller, {"BLOCK_QUERY_RESPONSE", Ledger.block_at_height(block_query_request.index)})
 
     {:noreply, state}
   end
