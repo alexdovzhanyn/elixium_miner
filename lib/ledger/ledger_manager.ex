@@ -71,26 +71,33 @@ defmodule Miner.LedgerManager do
         # recieved block.
         :ignore
       _diff ->
-        Logger.warn("Fork block received! Checking existing orphan pool...")
-
-        last_block_index = :binary.decode_unsigned(Ledger.last_block().index)
         block_index = :binary.decode_unsigned(block.index)
 
-        # TODO: Should this look at previous_hash as well?
-        if last_block_index == block_index do
-          # This block is a fork of the current latest block in the pool. Add it
-          # to our orphan pool and tell the peer to gossip the block.
-          Logger.warn("Received fork of current block.")
-          Orphan.add(block)
-          :gossip
+        have_orphan? =
+          block_index
+          |> Orphan.blocks_at_height()
+          |> Enum.any?(& &1 == block)
+
+        if have_orphan? do
+          :ignore
         else
-          if block_index == 0 do
+          # TODO: Should this look at previous_hash as well?
+          if Ledger.last_block().index == block.index do
+            # This block is a fork of the current latest block in the pool. Add it
+            # to our orphan pool and tell the peer to gossip the block.
+            Logger.warn("Received fork of current block.")
+
             Orphan.add(block)
             :gossip
           else
-            # Check the orphan pool for blocks at the previous height whose hash this
-            # orphan block references as a previous_hash
-            check_orphan_pool_for_ancestors(block)
+            if block_index == 0 do
+              Orphan.add(block)
+              :gossip
+            else
+              # Check the orphan pool for blocks at the previous height whose hash this
+              # orphan block references as a previous_hash
+              check_orphan_pool_for_ancestors(block)
+            end
           end
         end
     end
