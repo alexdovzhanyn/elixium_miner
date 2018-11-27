@@ -29,7 +29,7 @@ defmodule Miner.LedgerManager do
 
         # Will only match if the block we received is building directly
         # on the block that we have as the last block in our chain
-        if block_index == 0 || (block_index == :binary.decode_unsigned(last_block.index) + 1 && block.previous_hash == last_block.hash) do
+        if block_index == 0 || (last_block != :err && block_index == :binary.decode_unsigned(last_block.index) + 1 && block.previous_hash == last_block.hash) do
           # If this block is positioned as the next block in the chain,
           # validate it as such
           validate_new_block(block)
