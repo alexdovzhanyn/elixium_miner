@@ -83,6 +83,8 @@ defmodule Miner.PeerRouter do
       # a block that we're missing.
       # TODO: FETCH BLOCKS
     end
+
+    {:noreply, state}
   end
 
   # Handles a batch block query request, where another peer has asked this node to send
