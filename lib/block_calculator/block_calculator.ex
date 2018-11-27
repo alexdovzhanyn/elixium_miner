@@ -75,12 +75,16 @@ defmodule Miner.BlockCalculator do
   end
 
   def handle_cast(:restart, state) do
-    Process.exit(state.mine_task, :mine_interrupt)
+    if Map.has_key?(state, :mine_task) do
+      Process.exit(state.mine_task, :mine_interrupt)
+    end
+
     Logger.info("Interrupted mining of current block.")
 
     {:ok, pid} = Mine.start(state.address, find_favorable_transactions(state.transactions))
 
     state = Map.put(state, :mine_task, pid)
+
     {:noreply, state}
   end
 
