@@ -48,6 +48,14 @@ defmodule Miner.RPC.Router do
     end
   end
 
+  def get("/connected_nodes") do
+    Elixium.Node.Supervisor.connected_handlers()
+    |> Enum.map(&Process.info/1)
+    |> Enum.map(& Keyword.get(&1, :dictionary))
+    |> Enum.map(& Keyword.get(&1, :connected))
+    |> Poison.encode!()
+  end
+
   def get(_), do: "404"
 
   @doc """
@@ -62,16 +70,23 @@ defmodule Miner.RPC.Router do
     }
 
     transactions = Enum.map(block.transactions, fn tx ->
-      if Map.has_key?(tx, :sigs) do
-        sigs = Enum.map(tx.sigs, fn {addr, sig} -> [addr, Base.encode64(sig)] end)
+      tx =
+        if Map.has_key?(tx, :sigs) do
+          sigs = Enum.map(tx.sigs, fn {addr, sig} -> [addr, Base.encode64(sig)] end)
 
-        Map.put(tx, :sigs, sigs)
-      else
-        tx
-      end
+          Map.put(tx, :sigs, sigs)
+        else
+          tx
+        end
+
+      Map.put(tx, :size, tx |> :erlang.term_to_binary |> byte_size)
     end)
 
-    Map.put(b, :transactions, transactions)
+    b = Map.put(b, :transactions, transactions)
+
+    b = Map.put(b, :size, Elixium.BlockEncoder.encode(block) |> byte_size)
+
+    Map.put(b, :reward, Elixium.Block.calculate_block_reward(b.index))
   end
 
 end

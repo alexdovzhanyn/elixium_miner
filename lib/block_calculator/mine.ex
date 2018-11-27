@@ -42,12 +42,12 @@ defmodule Miner.BlockCalculator.Mine do
   end
 
   defp merge_block(coinbase, block) do
-    new_transactions = [coinbase | block.transactions]
-    txoids = Enum.map(new_transactions, & &1.id)
+    transactions = [coinbase | block.transactions]
+    txdigests = Enum.map(transactions, &:erlang.term_to_binary/1)
 
     Map.merge(block, %{
-      transactions: new_transactions,
-      merkle_root: Utilities.calculate_merkle_root(txoids)
+      transactions: transactions,
+      merkle_root: Utilities.calculate_merkle_root(txdigests)
     })
   end
 end
