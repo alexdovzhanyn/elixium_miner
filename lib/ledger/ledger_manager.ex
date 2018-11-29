@@ -242,8 +242,8 @@ defmodule Miner.LedgerManager do
         end
       orphan_blocks ->
         orphan_blocks
-        |> Enum.filter(fn {_, block} -> block.hash == hd(chain).previous_hash end)
-        |> Enum.find_value(fn {_, candidate_orphan} ->
+        |> Enum.filter(& &1.hash == hd(chain).previous_hash)
+        |> Enum.find_value(fn candidate_orphan ->
           # Check if we agree on a previous_hash
           case Ledger.retrieve_block(candidate_orphan.previous_hash) do
             # We need to dig deeper...
