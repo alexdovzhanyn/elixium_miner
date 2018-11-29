@@ -39,9 +39,8 @@ defmodule Miner.PeerRouter do
         # We've received a valid block. We need to stop mining the block we're
         # currently working on and start mining the new one. We also need to gossip
         # this block to all the nodes we know of.
-        Logger.info("Received valid block (#{block.hash}) at index #{:binary.decode_unsigned(block.index)}.")
+        Logger.info("Received valid block #{block.hash} at index #{:binary.decode_unsigned(block.index)}.")
         Peer.gossip("BLOCK", block)
-        Logger.info("Gossipped block #{block.hash} to peers.")
 
         # Restart the miner to build upon this newly received block
         BlockCalculator.restart_mining()
@@ -50,7 +49,6 @@ defmodule Miner.PeerRouter do
         # For one reason or another, we want to gossip this block without
         # restarting our current block calculation. (Perhaps this is a fork block)
         Peer.gossip("BLOCK", block)
-        Logger.info("Gossipped block #{block.hash} to peers.")
 
       {:missing_blocks, fork_chain} ->
         # We've discovered a fork, but we can't rebuild the fork chain without
@@ -114,7 +112,7 @@ defmodule Miner.PeerRouter do
   # getting a response with potentially new blocks
   def handle_info({block_query_response = %{type: "BLOCK_BATCH_QUERY_RESPONSE"}, _caller}, state) do
     if length(block_query_response.blocks) > 0 do
-      Logger.info("Recieved #{length(block_query_response.blocks)} new blocks from peer.")
+      Logger.info("Recieved #{length(block_query_response.blocks)} blocks from peer.")
 
       Enum.map(block_query_response.blocks, fn block ->
         block = Block.sanitize(block)
@@ -148,8 +146,6 @@ defmodule Miner.PeerRouter do
     # are any. We'll ask for all blocks starting from our current index minus
     # 120 (4 hours worth of blocks before we disconnected) just in case there
     # was a fork after we disconnected.
-
-    Logger.info("Querying new peer for missed blocks...")
 
     starting_at =
       case Ledger.last_block() do
