@@ -51,12 +51,34 @@ defmodule Miner.BlockCalculator.Mine do
     })
   end
 
-  defp log_finished_block(block), do: Logger.info(
-    "\e[32mFinished mining block at index #{:binary.decode_unsigned(block.index)}\e[0m\n
-  Hash: \e[34m#{block.hash}\e[0m
-  Merkle: \e[34m#{block.merkle_root}\e[0m
-  Nonce: \e[34m#{:binary.decode_unsigned(block.nonce)}\e[0m    Difficulty: \e[34m#{block.difficulty}\e[0m    Block Size (Bytes): \e[34m #{block |> Elixium.BlockEncoder.encode() |> byte_size()}\e[0m
-  Transactions: \e[34m#{length(block.transactions)}\e[0m    Block Reward: \e[34m #{Block.calculate_block_reward(:binary.decode_unsigned(block.index))} \e[0m
-"
-  )
+  defp log_finished_block(block) do
+    earnings =
+      block.transactions
+      |> Enum.at(0)
+      |> Map.get(:outputs)
+      |> Enum.reduce(Decimal.new(0), fn o, acc -> Decimal.add(acc, o.amount) end)
+
+    nonce = :binary.decode_unsigned(block.nonce)
+    index = :binary.decode_unsigned(block.index)
+
+    reward =
+      block.index
+      |> :binary.decode_unsigned()
+      |> Block.calculate_block_reward()
+
+    block_size =
+      block
+      |> Elixium.BlockEncoder.encode()
+      |> byte_size()
+
+    Logger.info(
+    "\e[32mFinished mining block at index #{index}\e[0m\n
+    Hash: \e[34m#{block.hash}\e[0m
+    Merkle: \e[34m#{block.merkle_root}\e[0m
+    Nonce: \e[34m#{nonce}\e[0m    Difficulty: \e[34m#{block.difficulty}\e[0m    Block Size (Bytes): \e[34m#{block_size}\e[0m
+    Transactions: \e[34m#{length(block.transactions)}\e[0m    Block Reward: \e[34m #{reward} \e[0m
+    Total Earnings: \e[34m#{earnings}\e[0m
+    "
+    )
+  end
 end
