@@ -9,30 +9,78 @@ defmodule Miner.BlockCalculator.Mine do
   require Logger
 
   def start(address, transactions) do
-    Task.start(__MODULE__, :mine, [address, transactions])
+    Task.start(__MODULE__, :prepare_block, [address, transactions])
   end
 
-  def mine(address, transactions) do
+  def prepare_block(address, transactions) do
+    Process.flag :trap_exit, true
+
     block =
       case Ledger.last_block() do
         :err -> Block.initialize()
         last_block -> Block.initialize(last_block)
       end
 
-    block = Map.put(block, :transactions, transactions)
+    block
+    |> Map.put(:transactions, transactions)
+    |> calculate_coinbase_amount
+    |> Transaction.generate_coinbase(address)
+    |> merge_block(block)
+    |> mine()
+  end
+
+  def mine(block) do
+    max_nonce = 18446744073709551615 + 1
+    core_count = :erlang.system_info(:logical_processors)
+    whole_work = div(max_nonce, core_count)
+    work_rem = rem(max_nonce, core_count) - 1
+
+    {work_partitions, _} = Enum.flat_map_reduce(1..core_count, 0, fn x, acc ->
+      if acc == max_nonce do
+        {:halt, acc}
+      else
+        if x == 1 do
+          new_acc = acc + whole_work + work_rem
+          {[Range.new(acc, new_acc)], new_acc}
+        else
+          new_acc = acc + whole_work
+          {[Range.new(acc + 1, new_acc)], new_acc}
+        end
+      end
+    end)
 
     Logger.info("Mining block at index #{:binary.decode_unsigned(block.index)}...")
 
-    mined_block =
-      block
-      |> calculate_coinbase_amount
-      |> Transaction.generate_coinbase(address)
-      |> merge_block(block)
-      |> Block.mine()
+    miners =
+      work_partitions
+      |> Enum.with_index()
+      |> Enum.map(fn {nonce_range, cpu_number} ->
+        starting_nonce =
+          nonce_range
+          |> Enum.at(0)
+          |> :binary.encode_unsigned()
+          |> Utilities.zero_pad(8)
 
-    log_finished_block(mined_block)
+        b = Map.put(block, :nonce, starting_nonce)
+        {pid, _ref} = spawn_monitor(Block, :mine, [b, nonce_range, cpu_number])
 
-    BlockCalculator.finished_mining(mined_block)
+        pid
+      end)
+
+    receive do
+      {:EXIT, _, :mine_interrupt} ->
+        Enum.each(miners, & Process.exit(&1, :kill))
+        Process.exit(self(), :normal)
+      {:DOWN, _, :process, _, :not_in_range} ->
+        IO.puts "Block wasnt in nonce range"
+      {:DOWN, _, :process, _, mined_block} ->
+        Enum.each(miners, & Process.exit(&1, :kill))
+
+        log_finished_block(mined_block)
+
+        BlockCalculator.finished_mining(mined_block)
+      _ -> :miner_exited
+    end
   end
 
   @spec calculate_coinbase_amount(Block) :: Decimal
