@@ -42,5 +42,5 @@ defmodule Miner.RPC do
     {:noreply, state}
   end
 
-  def handle_info(any, state), do: {:noreply, state}
+  def handle_info(_any, state), do: {:noreply, state}
 end

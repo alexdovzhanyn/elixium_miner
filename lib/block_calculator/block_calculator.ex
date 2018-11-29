@@ -157,7 +157,7 @@ defmodule Miner.BlockCalculator do
   end
 
   # Fits as many transactions as possible into the block
-  defp fit_transactions([], transactions, remaining_space), do: transactions
+  defp fit_transactions([], transactions, _remaining_space), do: transactions
 
   defp fit_transactions([transaction | remaining_transactions], transactions, remaining_space) do
     tx_bytes =
