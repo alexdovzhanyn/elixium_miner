@@ -4,13 +4,7 @@ defmodule Miner.BlockCalculator.Supervisor do
   alias Miner.BlockCalculator
 
   def start_link(_args) do
-    address =
-      case Application.get_env(:elixium_miner, :address) do
-        nil ->
-          Logger.error("No miner address set! Please add a public key to config/config.exs!")
-          Process.exit(self(), :kill)
-        pkey -> pkey
-      end
+    address = get_miner_address()
 
     Supervisor.start_link(__MODULE__, address, name: __MODULE__)
   end
@@ -21,6 +15,16 @@ defmodule Miner.BlockCalculator.Supervisor do
     ]
 
     Supervisor.init(children, strategy: :one_for_one)
+  end
+
+  def get_miner_address do
+    "--address=" <> address =
+      :init.get_plain_arguments()
+      |> Enum.find(& String.starts_with?(List.to_string(&1), "--address="))
+      |> IO.inspect
+      |> List.to_string()
+
+    address
   end
 
 end
