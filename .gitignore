@@ -9,3 +9,4 @@ erl_crash.dump
 /.peers
 mix.lock
 config/dev.exs
+*.DS_Store
