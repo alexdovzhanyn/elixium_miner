@@ -39,6 +39,9 @@ environment :prod do
   set include_src: false
   set cookie: :"p@|CnzPH9,v[~/lDm,Y:*W>@dq8d:s~b5ofzKc&c1S8]53mj4R!OIQnz@%|Xl&DW"
   set vm_args: "rel/vm.args"
+  set commands: [
+    genkey: "rel/commands/genkey.sh"
+  ]
 end
 
 # You may define one or more releases in this file.
@@ -52,4 +55,3 @@ release :elixium_miner do
     :runtime_tools
   ]
 end
-
