@@ -13,7 +13,7 @@ Elixium address in order to specify where to credit block rewards. If you alread
 have one, skip ahead to the next section. In order to generate a key, run
 
 ```bash
-/bin/elixium_miner genkey
+./bin/elixium_miner genkey
 ```
 
 which will give you output that looks like:
@@ -30,7 +30,7 @@ Once you have your address, you can run the miner by running the following
 (replace the address with your own):
 
 ```bash
-/bin/elixium_miner foreground --address=EX05YqbW4otW2stMc8HzE3DkrBEJodAFGAtmYfzBsWRWJsYRrrHCt
+./bin/elixium_miner foreground --address=EX05YqbW4otW2stMc8HzE3DkrBEJodAFGAtmYfzBsWRWJsYRrrHCt
 ```
 
 ### Running in dev mode
