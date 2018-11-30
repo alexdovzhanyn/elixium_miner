@@ -21,8 +21,9 @@ defmodule Miner.BlockCalculator.Mine do
         last_block -> Block.initialize(last_block)
       end
 
+    block = Map.put(block, :transactions, transactions)
+
     block
-    |> Map.put(:transactions, transactions)
     |> calculate_coinbase_amount
     |> Transaction.generate_coinbase(address)
     |> merge_block(block)

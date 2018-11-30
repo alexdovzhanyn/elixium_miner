@@ -130,10 +130,13 @@ defmodule Miner.PeerRouter do
   def handle_info({transaction = %{type: "TRANSACTION"}, _caller}, state) do
     transaction = Transaction.sanitize(transaction)
 
-    IO.inspect(transaction.id, label: "New transaction")
-
     if Validator.valid_transaction?(transaction) do
-      BlockCalculator.add_tx_to_pool(transaction)
+      if transaction not in BlockCalculator.transaction_pool() do
+        <<shortid::bytes-size(20), _rest::binary>> = transaction.id
+        Logger.info("Received transaction \e[32m#{shortid}...\e[0m")
+        BlockCalculator.add_tx_to_pool(transaction)
+        Peer.gossip("TRANSACTION", transaction)
+      end
     else
       Logger.info("Received Invalid Transaction. Ignoring.")
     end

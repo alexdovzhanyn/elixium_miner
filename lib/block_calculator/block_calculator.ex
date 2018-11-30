@@ -16,7 +16,7 @@ defmodule Miner.BlockCalculator do
   end
 
   def init(address) do
-    {:ok, %{address: address, transactions: []}}
+    {:ok, %{address: address, transactions: [], currently_mining: []}}
   end
 
   @doc """
@@ -59,6 +59,18 @@ defmodule Miner.BlockCalculator do
     GenServer.cast(__MODULE__, {:add_transaction_to_pool, tx})
   end
 
+  def transaction_pool do
+    GenServer.call(__MODULE__, :get_transaction_pool)
+  end
+
+  def remove_transactions_from_pool(transactions) do
+    GenServer.cast(__MODULE__, {:remove_transactions_from_pool, transactions})
+  end
+
+  def handle_call(:get_transaction_pool, _from, state) do
+    {:reply, state.transactions, state}
+  end
+
   def handle_cast(:interrupt, state) do
     Process.exit(state.mine_task, :mine_interrupt)
 
@@ -88,6 +100,7 @@ defmodule Miner.BlockCalculator do
   def handle_cast({:hash_found, block}, state) do
     case Validator.is_block_valid?(block, block.difficulty) do
       :ok ->
+        remove_transactions_from_pool(state.currently_mining)
         Ledger.append_block(block)
         Utxo.update_with_transactions(block.transactions)
         PeerRouter.distribute_block(block)
@@ -104,6 +117,10 @@ defmodule Miner.BlockCalculator do
     end
 
     {:noreply, state}
+  end
+
+  def handle_cast({:update_currently_mining_txs, transactions}, state) do
+    {:noreply, %{state | currently_mining: transactions}}
   end
 
   def handle_cast({:add_transaction_to_pool, transaction}, state) do
@@ -148,7 +165,7 @@ defmodule Miner.BlockCalculator do
       |> Enum.sort(& D.cmp(Transaction.calculate_fee(&1), Transaction.calculate_fee(&2)) == :gt || D.cmp(Transaction.calculate_fee(&1), Transaction.calculate_fee(&2)) == :eq)
       |> fit_transactions([], remaining_space)
 
-    GenServer.cast(__MODULE__, {:remove_transactions_from_pool, txs})
+    GenServer.cast(__MODULE__, {:update_currently_mining_txs, txs})
 
     txs
   end
