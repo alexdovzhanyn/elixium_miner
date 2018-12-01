@@ -164,6 +164,8 @@ defmodule Miner.LedgerManager do
           |> Kernel.+(1)
           |> Range.new(:binary.decode_unsigned(Ledger.last_block().index))
           |> Enum.map(&Ledger.block_at_height/1)
+          |> IO.inspect
+          |> Enum.filter(fn elem -> elem !== :none end) |> IO.inspect
 
         # Find transaction inputs that need to be reversed
         # TODO: We're looping over blocks_to_reverse twice here (once to parse
@@ -260,9 +262,8 @@ defmodule Miner.LedgerManager do
   # Return a list of all transaction inputs for every transaction in this block
   @spec parse_transaction_inputs(Block) :: list
   defp parse_transaction_inputs(block) do
-    block.transactions
-    |> Enum.flat_map(&(&1.inputs))
-    |> Enum.map(&(Map.delete(&1, :signature)))
+        block.transactions
+        |> Enum.flat_map(&(&1.inputs))
   end
 
   @spec parse_transaction_outputs(Block) :: list
