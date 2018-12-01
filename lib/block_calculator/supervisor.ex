@@ -23,7 +23,7 @@ defmodule Miner.BlockCalculator.Supervisor do
       |> Enum.find(& String.starts_with?(List.to_string(&1), "--address="))
       |> IO.inspect
       |> List.to_string()
-
+  
     address
   end
 

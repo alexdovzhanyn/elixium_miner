@@ -28,7 +28,8 @@ defmodule Miner.Mixfile do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:elixium_core, "~> 0.3"},
+      {:local_dependency, path: "../elixium_core", app: false},
+      #{:elixium_core, "~> 0.3"},
       {:decimal, "~> 1.0"},
       {:poison, "~> 3.1"},
       {:distillery, "~> 2.0"}
