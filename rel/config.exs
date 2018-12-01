@@ -40,7 +40,8 @@ environment :prod do
   set cookie: :"p@|CnzPH9,v[~/lDm,Y:*W>@dq8d:s~b5ofzKc&c1S8]53mj4R!OIQnz@%|Xl&DW"
   set vm_args: "rel/vm.args"
   set commands: [
-    genkey: "rel/commands/genkey.sh"
+    genkey: "rel/commands/genkey.sh",
+    dropchain: "rel/commands/drop_chain.sh"
   ]
 end
 

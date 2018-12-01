@@ -259,11 +259,7 @@ defmodule Miner.LedgerManager do
 
   # Return a list of all transaction inputs for every transaction in this block
   @spec parse_transaction_inputs(Block) :: list
-  defp parse_transaction_inputs(block) do
-    block.transactions
-    |> Enum.flat_map(&(&1.inputs))
-    |> Enum.map(&(Map.delete(&1, :signature)))
-  end
+  defp parse_transaction_inputs(block), do: Enum.flat_map(block.transactions, &(&1.inputs))
 
   @spec parse_transaction_outputs(Block) :: list
   defp parse_transaction_outputs(block), do: Enum.flat_map(block.transactions, &(&1.outputs))
@@ -280,7 +276,7 @@ defmodule Miner.LedgerManager do
     curr_index_in_fork = Enum.find_index(chain, &(&1 == block))
 
     blocks_from_canon =
-      if curr_index_in_fork < 60 do
+      if curr_index_in_fork < retargeting_window do
         to_get = retargeting_window - curr_index_in_fork
 
         Ledger.last_n_blocks(to_get, :binary.decode_unsigned(hd(chain).index) - 1)
@@ -288,7 +284,16 @@ defmodule Miner.LedgerManager do
         []
       end
 
-    blocks_from_fork = Enum.take(chain, curr_index_in_fork - 1)
+    get_from_fork = retargeting_window - length(blocks_from_canon)
+
+    chain_without_extra_blocks =
+      if curr_index_in_fork > retargeting_window do
+        chain -- Enum.take(chain, curr_index_in_fork - retargeting_window)
+      else
+        chain
+      end
+
+    blocks_from_fork = Enum.take(chain_without_extra_blocks, get_from_fork)
 
     difficulty = Block.calculate_difficulty(block, blocks_from_canon ++ blocks_from_fork)
 
