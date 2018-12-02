@@ -56,7 +56,7 @@ defmodule Miner.PeerRouter do
         # We've discovered a fork, but we can't rebuild the fork chain without
         # some blocks. Let's request them from our peer.
         query_block(:binary.decode_unsigned(hd(fork_chain).index) - 1, caller)
-        
+
       :ignore -> :ignore # We already know of this block. Ignore it
       :invalid -> Logger.info("Recieved invalid block at index #{:binary.decode_unsigned(block.index)}.")
     end
@@ -117,14 +117,22 @@ defmodule Miner.PeerRouter do
     if length(block_query_response.blocks) > 0 do
       Logger.info("Recieved #{length(block_query_response.blocks)} blocks from peer.")
 
-      Enum.map(block_query_response.blocks, fn block ->
+      BlockCalculator.interrupt_mining()
+
+      block_query_response.blocks
+      |> Enum.with_index()
+      |> Enum.each(fn {block, i} ->
         block = Block.sanitize(block)
 
         if LedgerManager.handle_new_block(block) == :ok do
-          # Restart the miner to build upon this newly received block
-          BlockCalculator.restart_mining()
+          IO.write("Syncing blocks #{round(((i + 1) / length(block_query_response.blocks)) * 100)}% [#{i + 1}/#{length(block_query_response.blocks)}]\r")
         end
       end)
+
+      IO.write("Block Sync Complete")
+
+      # Restart the miner to build upon this newly received blocks
+      BlockCalculator.start_mining()
     end
 
     {:noreply, state}

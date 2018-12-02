@@ -22,7 +22,7 @@ defmodule Miner.Supervisor do
     ]
 
     children =
-      if Application.get_env(:elixium_miner, :enable_rpc) do
+      if String.to_atom(Util.get_arg(:rpc, "nil")) do
         [Miner.RPC.Supervisor | children]
       else
         children

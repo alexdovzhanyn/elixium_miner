@@ -44,6 +44,9 @@ environment :prod do
     dropchain: "rel/commands/drop_chain.sh",
     usage: "rel/commands/usage.sh"
   ]
+  set overlays: [
+    {:copy, "rel/overlays/run.sh", "run.sh"},
+  ]
 end
 
 # You may define one or more releases in this file.
