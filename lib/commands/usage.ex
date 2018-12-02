@@ -3,7 +3,7 @@ defmodule Command.Usage do
   def run do
     IO.puts "
 USAGE
-  elixium_miner <command> --option=value
+  elixium_miner <command> --option value
 
 COMMANDS
   foreground          Runs miner with console output in the foreground

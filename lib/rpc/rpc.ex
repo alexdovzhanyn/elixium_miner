@@ -4,7 +4,12 @@ defmodule Miner.RPC do
   require Logger
 
   def start_link(_args) do
-    {:ok, socket} = :gen_tcp.listen(32123, packet: :http, active: true, exit_on_close: false)
+    port =
+      :rpcPort
+      |> Util.get_arg("32123")
+      |> String.to_integer()
+
+    {:ok, socket} = :gen_tcp.listen(port, packet: :http, active: true, exit_on_close: false)
     GenServer.start_link(__MODULE__, socket, name: __MODULE__)
   end
 

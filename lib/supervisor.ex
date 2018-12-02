@@ -22,7 +22,7 @@ defmodule Miner.Supervisor do
     ]
 
     children =
-      if String.to_atom(Util.get_arg(:rpc, "nil")) do
+      if Util.get_arg(:rpc) do
         [Miner.RPC.Supervisor | children]
       else
         children

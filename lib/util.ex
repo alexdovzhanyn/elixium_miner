@@ -7,27 +7,28 @@ defmodule Util do
   @doc """
     Gets an option that was passed in as a command line argument
   """
-  @spec get_arg(String.t() | atom, any) :: String.t()
-  def get_arg(arg, not_found \\ nil)
-  def get_arg(arg, not_found) when is_atom(arg), do: get_arg(Atom.to_string(arg), not_found)
+  @spec get_arg(atom, any) :: String.t()
+  def get_arg(arg, not_found \\ nil), do: Map.get(args(), arg, not_found)
 
-  def get_arg(arg, not_found) do
-    whole_arg = Enum.find(:init.get_plain_arguments(), fn argument ->
-      argument
-      |> List.to_string()
-      |> String.starts_with?("--#{arg}=")
-    end)
+  def args do
+    :init.get_plain_arguments()
+    |> Enum.at(1)
+    |> List.to_string()
+    |> String.split("--")
+    |> Enum.filter(& &1 != "")
+    |> Enum.map(fn a ->
+         kv =
+           a
+           |> String.trim()
+           |> String.replace(~r/\s+/, " ")
+           |> String.split(" ")
 
-    case whole_arg do
-      nil -> not_found
-      argument ->
-        [_, value] =
-          argument
-          |> List.to_string()
-          |> String.split("--#{arg}=")
-          
-        value
-    end
+         case kv do
+           [key, value] -> {String.to_atom(key), value}
+           [key] -> {String.to_atom(key), true}
+         end
+       end)
+    |> Map.new()
   end
 
 end
