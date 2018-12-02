@@ -41,7 +41,8 @@ environment :prod do
   set vm_args: "rel/vm.args"
   set commands: [
     genkey: "rel/commands/genkey.sh",
-    dropchain: "rel/commands/drop_chain.sh"
+    dropchain: "rel/commands/drop_chain.sh",
+    usage: "rel/commands/usage.sh"
   ]
 end
 

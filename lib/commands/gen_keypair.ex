@@ -1,4 +1,4 @@
-defmodule GenKeypair do
+defmodule Command.GenKeypair do
   def run do
     {pub, priv} = Elixium.KeyPair.create_keypair()
 

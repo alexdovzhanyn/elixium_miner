@@ -4,7 +4,7 @@ defmodule Miner.BlockCalculator.Supervisor do
   alias Miner.BlockCalculator
 
   def start_link(_args) do
-    address = get_miner_address()
+    address = Util.get_arg(:address)
 
     Supervisor.start_link(__MODULE__, address, name: __MODULE__)
   end
@@ -21,7 +21,6 @@ defmodule Miner.BlockCalculator.Supervisor do
     "--address=" <> address =
       :init.get_plain_arguments()
       |> Enum.find(& String.starts_with?(List.to_string(&1), "--address="))
-      |> IO.inspect
       |> List.to_string()
 
     address

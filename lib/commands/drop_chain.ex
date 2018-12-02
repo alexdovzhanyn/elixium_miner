@@ -1,4 +1,4 @@
-defmodule DropChain do
+defmodule Command.DropChain do
   def run do
     sure? =
       "\nAre you sure? \e[31mThis can not be undone.\e[0m [Ny] "

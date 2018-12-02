@@ -6,7 +6,14 @@ defmodule Miner.Supervisor do
   end
 
   def init(_args) do
-    port = Application.get_env(:elixium_miner, :port)
+    port =
+      :port
+      |> Util.get_arg("-1")
+      |> String.to_integer()
+      |> case do
+           -1 -> nil
+           p -> p
+         end
 
     children = [
       {Elixium.Node.Supervisor, [:"Elixir.Miner.PeerRouter", port]},
