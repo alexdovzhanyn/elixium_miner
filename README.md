@@ -26,8 +26,12 @@ which will give you output that looks like:
     the key means losing access to all funds associated with the key.
 ```
 
-Once you have your address, you can run the miner by running the following
-(replace the address with your own):
+The next step is to [port forward](https://www.pcworld.com/article/244314/how_to_forward_ports_on_your_router.html)
+ports 31013, 31014, and 32123 on your router. If you don't do this, other 
+nodes on the network won't be able to connect to yours.
+
+Once you have your address and have the correct ports forwarded, you can run 
+the miner by running the following (replace the address with your own):
 
 ```bash
 ./bin/elixium_miner foreground --address=EX05YqbW4otW2stMc8HzE3DkrBEJodAFGAtmYfzBsWRWJsYRrrHCt
