@@ -42,6 +42,8 @@ defmodule Miner.PeerRouter do
         Logger.info("Received valid block #{block.hash} at index #{:binary.decode_unsigned(block.index)}.")
         Peer.gossip("BLOCK", block)
 
+        BlockCalculator.remove_transactions_from_pool(block.transactions)
+
         # Restart the miner to build upon this newly received block
         BlockCalculator.restart_mining()
 
@@ -54,6 +56,7 @@ defmodule Miner.PeerRouter do
         # We've discovered a fork, but we can't rebuild the fork chain without
         # some blocks. Let's request them from our peer.
         query_block(:binary.decode_unsigned(hd(fork_chain).index) - 1, caller)
+        
       :ignore -> :ignore # We already know of this block. Ignore it
       :invalid -> Logger.info("Recieved invalid block at index #{:binary.decode_unsigned(block.index)}.")
     end
