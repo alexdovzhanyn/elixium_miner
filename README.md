@@ -3,8 +3,8 @@ Official miner implementation for the Elixium blockchain
 
 ### How to Run
 
-Grab the appropriate release from the [releases](https://github.com/ElixiumNetwork/elixium_miner/releases)
-section and unzip it. If you don't see a release fitting your system, you will
+Grab the appropriate [latest release](https://github.com/ElixiumNetwork/elixium_miner/releases/latest) 
+and unzip it. If you don't see a release fitting your system, you will
 have to build from source.
 
 After downloading and unzipping the correct release, open a command line window,
@@ -30,12 +30,20 @@ The next step is to [port forward](https://www.pcworld.com/article/244314/how_to
 ports 31013, 31014, and 32123 on your router. If you don't do this, other 
 nodes on the network won't be able to connect to yours.
 
-Once you have your address and have the correct ports forwarded, you can run 
-the miner by running the following (replace the address with your own):
+Once you have your address and have the correct ports forwarded, open the run.sh file
+with a text editor, and replace the address in the file with your own:
 
 ```bash
-./bin/elixium_miner foreground --address=EX05YqbW4otW2stMc8HzE3DkrBEJodAFGAtmYfzBsWRWJsYRrrHCt
+$SCRIPT_DIR/bin/elixium_miner foreground --address EX05YqbW4otW2stMc8HzE3DkrBEJodAFGAtmYfzBsWRWJsYRrrHCt
 ```
+
+Next, double-click the run.sh file to run it.
+
+#### Advanced Usage
+
+People who are comfortable working within a terminal may prefer to create their own 
+run script. To see usage options, cd into the directory where the miner is extracted,
+and run `./bin/elixium_miner usage`.
 
 ### Running in dev mode
 
