@@ -20,6 +20,7 @@ defmodule Util do
          kv =
            a
            |> String.trim()
+           |> String.replace("=", " ")
            |> String.replace(~r/\s+/, " ")
            |> String.split(" ")
 
