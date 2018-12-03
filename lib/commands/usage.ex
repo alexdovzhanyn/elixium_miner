@@ -10,6 +10,8 @@ COMMANDS
   start               Runs miner in background
   stop                Stops miner started by calling start
   remote_console      Opens a remote console in the context of a running miner
+  dropchain           Delete all block and utxo data
+  genkey              Generate a new Elixium address keypair
 
 OPTIONS
   --address           Specifies which Elixium address to credit with rewards and block fees

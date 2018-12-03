@@ -7,7 +7,7 @@ defmodule Miner.BlockCalculator do
   alias Elixium.Validator
   alias Elixium.Transaction
   alias Elixium.Store.Ledger
-  alias Elixium.Store.Utxo
+  alias Elixium.Store.Oracle
   alias Elixium.Error
   alias Decimal, as: D
 
@@ -102,7 +102,7 @@ defmodule Miner.BlockCalculator do
       :ok ->
         remove_transactions_from_pool(state.currently_mining)
         Ledger.append_block(block)
-        Utxo.update_with_transactions(block.transactions)
+        Oracle.inquire(:"Elixir.Elixium.Store.UtxoOracle", {:update_with_transactions, [block.transactions]})
         PeerRouter.distribute_block(block)
         start_mining()
 

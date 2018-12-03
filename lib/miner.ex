@@ -11,6 +11,7 @@ defmodule Miner do
     end
 
     Elixium.Store.Utxo.initialize()
+    Elixium.Store.Oracle.start_link(Elixium.Store.Utxo)
     Elixium.Pool.Orphan.initialize()
     Miner.Supervisor.start_link()
   end
