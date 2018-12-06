@@ -16,14 +16,4 @@ defmodule Miner.BlockCalculator.Supervisor do
 
     Supervisor.init(children, strategy: :one_for_one)
   end
-
-  def get_miner_address do
-    "--address=" <> address =
-      :init.get_plain_arguments()
-      |> Enum.find(& String.starts_with?(List.to_string(&1), "--address="))
-      |> List.to_string()
-
-    address
-  end
-
 end

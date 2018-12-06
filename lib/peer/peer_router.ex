@@ -3,7 +3,7 @@ defmodule Miner.PeerRouter do
   require Logger
   require IEx
   alias Elixium.Node.Supervisor, as: Peer
-  alias Miner.LedgerManager
+  alias Elixium.Node.LedgerManager
   alias Miner.BlockCalculator
   alias Elixium.Store.Ledger
   alias Elixium.Pool.Orphan
