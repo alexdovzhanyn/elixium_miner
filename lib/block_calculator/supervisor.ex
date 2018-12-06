@@ -4,7 +4,7 @@ defmodule Miner.BlockCalculator.Supervisor do
   alias Miner.BlockCalculator
 
   def start_link(_args) do
-    address = Util.get_arg(:address)
+    address = Elixium.Utilities.get_arg(:address)
 
     Supervisor.start_link(__MODULE__, address, name: __MODULE__)
   end

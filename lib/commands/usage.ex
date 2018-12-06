@@ -16,9 +16,9 @@ COMMANDS
 OPTIONS
   --address           Specifies which Elixium address to credit with rewards and block fees
   --port              What port to use when connecting to the network (defaults to 31013)
-  --rpc               Enable set to strue to enable RPC JSON commands
+  --rpc               Enable RPC JSON commands
   --rpcPort           Use specific port for RPC (defaults to 32123)
-  --healthCheckPort   Specify which port to use for health check pings (defaults to 31014)
+  --maxHandlers       Specify the maximum amount of inbound & outbound connections
     "
   end
 

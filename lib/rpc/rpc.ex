@@ -6,7 +6,7 @@ defmodule Miner.RPC do
   def start_link(_args) do
     port =
       :rpcPort
-      |> Util.get_arg("32123")
+      |> Elixium.Utilities.get_arg("32123")
       |> String.to_integer()
 
     {:ok, socket} = :gen_tcp.listen(port, packet: :http, active: true, exit_on_close: false)

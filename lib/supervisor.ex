@@ -8,7 +8,7 @@ defmodule Miner.Supervisor do
   def init(_args) do
     port =
       :port
-      |> Util.get_arg("-1")
+      |> Elixium.Utilities.get_arg("-1")
       |> String.to_integer()
       |> case do
            -1 -> nil
@@ -22,7 +22,7 @@ defmodule Miner.Supervisor do
     ]
 
     children =
-      if Util.get_arg(:rpc) do
+      if Elixium.Utilities.get_arg(:rpc) do
         [Miner.RPC.Supervisor | children]
       else
         children
