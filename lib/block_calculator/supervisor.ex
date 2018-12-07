@@ -4,7 +4,12 @@ defmodule Miner.BlockCalculator.Supervisor do
   alias Miner.BlockCalculator
 
   def start_link(_args) do
-    address = Elixium.Utilities.get_arg(:address)
+    address = Application.get_env(:elixium_miner, :address)
+
+    if address == "" || address == nil do
+      Logger.error("No miner address specified! Add one in config.toml")
+      Process.exit(self(), :kill)
+    end
 
     Supervisor.start_link(__MODULE__, address, name: __MODULE__)
   end

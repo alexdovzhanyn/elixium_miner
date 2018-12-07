@@ -6,23 +6,14 @@ defmodule Miner.Supervisor do
   end
 
   def init(_args) do
-    port =
-      :port
-      |> Elixium.Utilities.get_arg("-1")
-      |> String.to_integer()
-      |> case do
-           -1 -> nil
-           p -> p
-         end
-
     children = [
-      {Elixium.Node.Supervisor, [:"Elixir.Miner.PeerRouter", port]},
+      {Elixium.Node.Supervisor, [:"Elixir.Miner.PeerRouter"]},
       Miner.BlockCalculator.Supervisor,
       Miner.PeerRouter.Supervisor
     ]
 
     children =
-      if Elixium.Utilities.get_arg(:rpc) do
+      if Application.get_env(:elixium_miner, :rpc) do
         [Miner.RPC.Supervisor | children]
       else
         children

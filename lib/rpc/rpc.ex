@@ -4,10 +4,7 @@ defmodule Miner.RPC do
   require Logger
 
   def start_link(_args) do
-    port =
-      :rpcPort
-      |> Elixium.Utilities.get_arg("32123")
-      |> String.to_integer()
+    port = Application.get_env(:elixium_miner, :rpc_port)
 
     {:ok, socket} = :gen_tcp.listen(port, packet: :http, active: true, exit_on_close: false)
     GenServer.start_link(__MODULE__, socket, name: __MODULE__)

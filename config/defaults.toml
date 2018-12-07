@@ -1,0 +1,29 @@
+# -------------- Configuration for Elixium Core --------------
+[elixium_core]
+# Maximum amount of inbound/outbound connections to have at any
+# given moment
+max_handlers = 10
+
+# URL used to bootstrap node connections (fetch list of peers)
+# on initial connection to the network
+bootstrap_url = "https://registry.testnet.elixium.app/"
+
+# Path to store elixium related data (blocks, utxos, peers, etc)
+data_path = "~/.elixium"
+
+# The port on which to accept inbound connections (must be
+# port-forwarded)
+port = 31013
+
+# ------------ End Configuration for Elixium Core ------------
+
+# ------------- Configuration for Elixium Miner --------------
+[elixium_miner]
+# Elixium address which to credit block rewards to
+address = ""
+
+# Enable/disable RPC
+rpc = false
+
+# Which port to run RPC on (if enabled)
+rpc_port = 32123

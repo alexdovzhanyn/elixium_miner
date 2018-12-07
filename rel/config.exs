@@ -44,8 +44,11 @@ environment :prod do
     dropchain: "rel/commands/drop_chain.sh",
     usage: "rel/commands/usage.sh"
   ]
+  set config_providers: [
+    {Toml.Provider, [path: "${RELEASE_ROOT_DIR}/config.toml"]}
+  ]
   set overlays: [
-    {:copy, "rel/overlays/run.sh", "run.sh"},
+    {:copy, "config/defaults.toml", "config.toml"},
   ]
 end
 
