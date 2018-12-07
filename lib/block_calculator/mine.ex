@@ -31,8 +31,14 @@ defmodule Miner.BlockCalculator.Mine do
   end
 
   def mine(block) do
+    core_count =
+      case Application.get_env(:elixium_miner, :cpu_cores) do
+        "all" -> :erlang.system_info(:logical_processors)
+        nil -> :erlang.system_info(:logical_processors)
+        num -> num
+      end
+
     max_nonce = 18446744073709551615 + 1
-    core_count = :erlang.system_info(:logical_processors)
     whole_work = div(max_nonce, core_count)
     work_rem = rem(max_nonce, core_count) - 1
 

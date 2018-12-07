@@ -27,3 +27,11 @@ rpc = false
 
 # Which port to run RPC on (if enabled)
 rpc_port = 32123
+
+# Number of CPU cores to use when mining. Set to "all" to use
+# all available cores, or specify a number
+cpu_cores = "all"
+
+[logger.info]
+level = "info"
+path = "./log/info.log"

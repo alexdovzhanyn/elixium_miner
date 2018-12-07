@@ -32,7 +32,8 @@ defmodule Miner.Mixfile do
       {:decimal, "~> 1.0"},
       {:poison, "~> 3.1"},
       {:distillery, "~> 2.0"},
-      {:toml, "~> 0.5"}
+      {:toml, "~> 0.5"},
+      {:logger_file_backend, "~> 0.0.10"}
     ]
   end
 end

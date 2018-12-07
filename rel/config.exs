@@ -45,7 +45,7 @@ environment :prod do
     usage: "rel/commands/usage.sh"
   ]
   set config_providers: [
-    {Toml.Provider, [path: "${RELEASE_ROOT_DIR}/config.toml"]}
+    {Toml.Provider, [path: "${RELEASE_ROOT_DIR}/config.toml", transforms: [LoggerLevelTransformer]]}
   ]
   set overlays: [
     {:copy, "config/defaults.toml", "config.toml"},
