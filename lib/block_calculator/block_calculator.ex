@@ -16,7 +16,7 @@ defmodule Miner.BlockCalculator do
   end
 
   def init(address) do
-    {:ok, %{address: address, transactions: [], currently_mining: []}}
+    {:ok, %{address: address, transactions: [], currently_mining: [], mine_task: []}}
   end
 
   @doc """
@@ -72,27 +72,25 @@ defmodule Miner.BlockCalculator do
   end
 
   def handle_cast(:interrupt, state) do
-    Process.exit(state.mine_task, :mine_interrupt)
+    Enum.each(state.mine_task, & Process.exit(&1, :mine_interrupt))
 
-    state = Map.put(state, :mine_task, nil)
+    state = Map.put(state, :mine_task, [])
     {:noreply, state}
   end
 
   def handle_cast(:start, state) do
     {:ok, pid} = Mine.start(state.address, find_favorable_transactions(state.transactions))
 
-    state = Map.put(state, :mine_task, pid)
+    state = Map.put(state, :mine_task, [pid | state.mine_task])
     {:noreply, state}
   end
 
   def handle_cast(:restart, state) do
-    if Map.has_key?(state, :mine_task) do
-      Process.exit(state.mine_task, :mine_interrupt)
-    end
+    Enum.each(state.mine_task, & Process.exit(&1, :mine_interrupt))
 
     {:ok, pid} = Mine.start(state.address, find_favorable_transactions(state.transactions))
 
-    state = Map.put(state, :mine_task, pid)
+    state = Map.put(state, :mine_task, [pid | state.mine_task])
 
     {:noreply, state}
   end
