@@ -10,6 +10,7 @@ defmodule Miner.PeerRouter do
   alias Elixium.Block
   alias Elixium.Transaction
   alias Elixium.Validator
+  alias Elixium.Store.Oracle
 
   def start_link(_args) do
     GenServer.start_link(__MODULE__, [], name: __MODULE__)
@@ -177,7 +178,29 @@ defmodule Miner.PeerRouter do
   end
 
   def handle_info({:new_inbound_connection, handler_pid}, state) do
+    send(handler_pid, {"PORT_RECONNECTION_QUERY", %{}})
     send(handler_pid, {"PEER_QUERY_REQUEST", %{}})
+
+    {:noreply, state}
+  end
+
+  def handle_info({%{type: "PORT_RECONNECTION_QUERY"}, handler_pid}, state) do
+    port = Application.get_env(:elixium_core, :port)
+
+    send(handler_pid, {"PORT_RECONNECTION_RESPONSE", %{port: port}})
+
+    {:noreply, state}
+  end
+
+  def handle_info({%{type: "PORT_RECONNECTION_RESPONSE", port: port}, handler_pid}, state) do
+    ip =
+      handler_pid
+      |> Process.info()
+      |> Keyword.get(:dictionary)
+      |> Keyword.get(:connected)
+      |> String.to_charlist()
+
+    Oracle.inquire(:"Elixir.Elixium.Store.PeerOracle", {:save_known_peer, [{ip, port}]})
 
     {:noreply, state}
   end

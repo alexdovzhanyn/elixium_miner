@@ -4,8 +4,7 @@ defmodule Miner do
   def start(_type, _args) do
     print_ascii_header()
     Elixium.Store.Ledger.initialize()
-
-    # TODO: Make genesis block mined rather than hard-coded
+    
     if !Elixium.Store.Ledger.empty?() do
       Elixium.Store.Ledger.hydrate()
     end

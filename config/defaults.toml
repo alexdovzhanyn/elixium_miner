@@ -15,6 +15,15 @@ data_path = "~/.elixium"
 # port-forwarded)
 port = 31013
 
+# Maximum number of outbound connections. Upon failing to connect
+# via outbound request, these will default to accepting inbound
+# connections
+max_bidirectional_connections = 10
+
+# Maximum number of inbound connections (outside of any
+# bidirectional connections that have defaulted to being inbound)
+max_inbound_connections = 90
+
 # ------------ End Configuration for Elixium Core ------------
 
 # ------------- Configuration for Elixium Miner --------------

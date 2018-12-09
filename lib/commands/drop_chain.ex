@@ -8,8 +8,14 @@ defmodule Command.DropChain do
     if sure? == "Y" || sure? == "y" || sure? == "yes" do
       IO.puts("Deleting all chain data...")
 
-      Exleveldb.destroy(".chaindata")
-      Exleveldb.destroy(".utxo")
+      data_dir =
+        :elixium_core
+        |> Application.get_env(:data_path)
+        |> Path.expand()
+        |> IO.inspect
+
+      Exleveldb.destroy("#{data_dir}/chaindata")
+      Exleveldb.destroy("#{data_dir}/utxo")
 
       IO.puts "Done."
 
