@@ -1,9 +1,5 @@
 # -------------- Configuration for Elixium Core --------------
 [elixium_core]
-# Maximum amount of inbound/outbound connections to have at any
-# given moment
-max_handlers = 10
-
 # URL used to bootstrap node connections (fetch list of peers)
 # on initial connection to the network
 bootstrap_url = "https://registry.testnet.elixium.app/"
@@ -37,9 +33,10 @@ rpc = false
 # Which port to run RPC on (if enabled)
 rpc_port = 32123
 
-# Number of CPU cores to use when mining. Set to "all" to use
-# all available cores, or specify a number
-cpu_cores = "all"
+# Number of mining processes to spawn. Set to "dynamic" to allocate
+# one process per CPU core (usually resulting in best performance),
+# or set to an integer
+mining_processes = "dynamic"
 
 [logger.info]
 level = "info"

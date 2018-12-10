@@ -32,8 +32,8 @@ defmodule Miner.BlockCalculator.Mine do
 
   def mine(block) do
     core_count =
-      case Application.get_env(:elixium_miner, :cpu_cores) do
-        "all" -> :erlang.system_info(:logical_processors)
+      case Application.get_env(:elixium_miner, :mining_processes) do
+        "dynamic" -> :erlang.system_info(:logical_processors)
         nil -> :erlang.system_info(:logical_processors)
         num -> num
       end

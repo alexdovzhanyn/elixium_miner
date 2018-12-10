@@ -24,10 +24,13 @@ defmodule Miner.RPC.Router do
   end
 
   def get("/block_by_hash/" <> hash) do
-    hash
-    |> Ledger.retrieve_block()
-    |> nonbinary_block()
-    |> Poison.encode!()
+    case Ledger.retrieve_block(hash) do
+      :none -> "Not found"
+      block ->
+        block
+        |> nonbinary_block()
+        |> Poison.encode!()
+    end
   end
 
   def get("/latest_block") do
