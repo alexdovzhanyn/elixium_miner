@@ -142,8 +142,8 @@ defmodule Miner.PeerRouter do
   def handle_info({transaction = %{type: "TRANSACTION"}, _caller}, state) do
     transaction = Transaction.sanitize(transaction)
 
-    if Validator.valid_transaction?(transaction) do
-      if transaction not in BlockCalculator.transaction_pool() do
+    if Validator.valid_transaction?(transaction) == :ok do
+      if transaction.id not in Enum.map(BlockCalculator.transaction_pool(), & &1.id) do
         <<shortid::bytes-size(20), _rest::binary>> = transaction.id
         Logger.info("Received transaction \e[32m#{shortid}...\e[0m")
         BlockCalculator.add_tx_to_pool(transaction)

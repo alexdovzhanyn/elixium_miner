@@ -143,7 +143,11 @@ defmodule Miner.BlockCalculator do
   end
 
   def handle_cast({:remove_transactions_from_pool, transactions}, state) do
-    transactions = state.transactions -- transactions
+    txids = Enum.map(transactions, & &1.id)
+
+    remove = Enum.filter(state.transactions, & &1.id in txids)
+
+    transactions = state.transactions -- remove
 
     {:noreply, %{state | transactions: transactions}}
   end
