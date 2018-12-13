@@ -30,14 +30,14 @@ The next step is to [port forward](https://www.pcworld.com/article/244314/how_to
 ports 31013, 31014, and 32123 on your router. If you don't do this, other
 nodes on the network won't be able to connect to yours.
 
-Once you have your address and have the correct ports forwarded, open the run.sh file
-with a text editor, and replace the address in the file with your own:
+Once you have your address and have the correct ports forwarded, open the config.toml file
+with a text editor, and add your address:
 
 ```bash
-$SCRIPT_DIR/bin/elixium_miner foreground --address EX05YqbW4otW2stMc8HzE3DkrBEJodAFGAtmYfzBsWRWJsYRrrHCt
+address = "EX05YqbW4otW2stMc8HzE3DkrBEJodAFGAtmYfzBsWRWJsYRrrHCt"
 ```
 
-Next, double-click the run.sh file to run it.
+Next, double-click the run file to run the miner.
 
 #### Advanced Usage
 
