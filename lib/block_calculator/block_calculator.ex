@@ -9,7 +9,6 @@ defmodule Miner.BlockCalculator do
   alias Elixium.Store.Ledger
   alias Elixium.Store.Oracle
   alias Elixium.Error
-  alias Decimal, as: D
 
   def start_link(address) do
     GenServer.start_link(__MODULE__, address, name: __MODULE__)
@@ -164,7 +163,7 @@ defmodule Miner.BlockCalculator do
 
     txs =
       transaction_pool
-      |> Enum.sort(& D.cmp(Transaction.calculate_fee(&1), Transaction.calculate_fee(&2)) == :gt || D.cmp(Transaction.calculate_fee(&1), Transaction.calculate_fee(&2)) == :eq)
+      |> Enum.sort(& Transaction.calculate_fee(&1) >= Transaction.calculate_fee(&2))
       |> fit_transactions([], remaining_space)
 
     GenServer.cast(__MODULE__, {:update_currently_mining_txs, txs})
