@@ -4,7 +4,6 @@ defmodule Miner.BlockCalculator.Mine do
   alias Elixium.Block
   alias Elixium.Store.Ledger
   alias Elixium.Transaction
-  alias Decimal, as: D
   alias Elixium.Utilities
   require Logger
 
@@ -90,10 +89,10 @@ defmodule Miner.BlockCalculator.Mine do
     end
   end
 
-  @spec calculate_coinbase_amount(Block) :: Decimal
+  @spec calculate_coinbase_amount(Block) :: integer
   defp calculate_coinbase_amount(block) do
     index = :binary.decode_unsigned(block.index)
-    D.add(Block.calculate_block_reward(index), Block.total_block_fees(block.transactions))
+    Block.calculate_block_reward(index) + Block.total_block_fees(block.transactions)
   end
 
   defp merge_block(coinbase, block) do
@@ -111,7 +110,7 @@ defmodule Miner.BlockCalculator.Mine do
       block.transactions
       |> Enum.at(0)
       |> Map.get(:outputs)
-      |> Enum.reduce(Decimal.new(0), fn o, acc -> Decimal.add(acc, o.amount) end)
+      |> Enum.reduce(0, & &1.amount + &2) 
 
     nonce = :binary.decode_unsigned(block.nonce)
     index = :binary.decode_unsigned(block.index)
