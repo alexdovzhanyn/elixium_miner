@@ -15,6 +15,8 @@ defmodule Miner.BlockCalculator do
   end
 
   def init(address) do
+    Process.send_after(self(), :start, 1000)
+
     {:ok, %{address: address, transactions: [], currently_mining: [], mine_task: []}}
   end
 
@@ -24,25 +26,19 @@ defmodule Miner.BlockCalculator do
     currently mining at; we don't want to continue mining an old block, so we
     start over on a new block.
   """
-  def interrupt_mining do
-    GenServer.cast(__MODULE__, :interrupt)
-  end
+  def interrupt_mining, do: GenServer.cast(__MODULE__, :interrupt)
 
   @doc """
     Starts the mining task to mine the next block in the chain.
   """
-  def start_mining do
-    GenServer.cast(__MODULE__, :start)
-  end
+  def start_mining, do: GenServer.cast(__MODULE__, :start)
 
   @doc """
     Called pretty much exclusively by the mine task to signal that it has found
     a suitable hash. This will distribute the block to known peers and start a
     task to mine the next block.
   """
-  def finished_mining(block) do
-    GenServer.cast(__MODULE__, {:hash_found, block})
-  end
+  def finished_mining(block), do: GenServer.cast(__MODULE__, {:hash_found, block})
 
   @doc """
     Tell the block calculator to stop mining the block it's working on and start
@@ -50,17 +46,11 @@ defmodule Miner.BlockCalculator do
     index that we're currently mining at; we don't want to continue mining an
     old block, so we start over on a new block.
   """
-  def restart_mining do
-    GenServer.cast(__MODULE__, :restart)
-  end
+  def restart_mining, do: GenServer.cast(__MODULE__, :restart)
 
-  def add_tx_to_pool(tx) do
-    GenServer.cast(__MODULE__, {:add_transaction_to_pool, tx})
-  end
+  def add_tx_to_pool(tx), do: GenServer.cast(__MODULE__, {:add_transaction_to_pool, tx})
 
-  def transaction_pool do
-    GenServer.call(__MODULE__, :get_transaction_pool)
-  end
+  def transaction_pool, do: GenServer.call(__MODULE__, :get_transaction_pool)
 
   def remove_transactions_from_pool(transactions) do
     GenServer.cast(__MODULE__, {:remove_transactions_from_pool, transactions})
@@ -74,6 +64,11 @@ defmodule Miner.BlockCalculator do
     Enum.each(state.mine_task, & Process.exit(&1, :mine_interrupt))
 
     state = Map.put(state, :mine_task, [])
+    {:noreply, state}
+  end
+
+  def handle_info(:start, state) do 
+    start_mining()
     {:noreply, state}
   end
 
@@ -100,7 +95,7 @@ defmodule Miner.BlockCalculator do
         remove_transactions_from_pool(state.currently_mining)
         Ledger.append_block(block)
         Oracle.inquire(:"Elixir.Elixium.Store.UtxoOracle", {:update_with_transactions, [block.transactions]})
-        PeerRouter.distribute_block(block)
+        Pico.broadcast("BLOCK", block)
         start_mining()
 
       err ->
