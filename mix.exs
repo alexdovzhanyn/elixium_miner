@@ -4,7 +4,7 @@ defmodule Miner.Mixfile do
   def project do
     [
       app: :elixium_miner,
-      version: "1.1.4",
+      version: "1.2.0",
       elixir: "~> 1.7",
       start_permanent: true,
       deps: deps()

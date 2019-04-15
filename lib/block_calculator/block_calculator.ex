@@ -3,7 +3,6 @@ defmodule Miner.BlockCalculator do
   require IEx
   require Logger
   alias Miner.BlockCalculator.Mine
-  alias Miner.PeerRouter
   alias Elixium.Validator
   alias Elixium.Transaction
   alias Elixium.Store.Ledger
@@ -56,6 +55,11 @@ defmodule Miner.BlockCalculator do
     GenServer.cast(__MODULE__, {:remove_transactions_from_pool, transactions})
   end
 
+  def handle_info(:start, state) do
+    start_mining()
+    {:noreply, state}
+  end
+
   def handle_call(:get_transaction_pool, _from, state) do
     {:reply, state.transactions, state}
   end
@@ -64,11 +68,6 @@ defmodule Miner.BlockCalculator do
     Enum.each(state.mine_task, & Process.exit(&1, :mine_interrupt))
 
     state = Map.put(state, :mine_task, [])
-    {:noreply, state}
-  end
-
-  def handle_info(:start, state) do 
-    start_mining()
     {:noreply, state}
   end
 

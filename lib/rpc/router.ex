@@ -52,10 +52,8 @@ defmodule Miner.RPC.Router do
   end
 
   def get("/connected_nodes") do
-    Elixium.Node.Supervisor.connected_handlers()
-    |> Enum.map(&Process.info/1)
-    |> Enum.map(& Keyword.get(&1, :dictionary))
-    |> Enum.map(& Keyword.get(&1, :connected))
+    Pico.Client.SharedState.connections()
+    |> Enum.map(fn {_, ip} -> ip end)
     |> Poison.encode!()
   end
 
