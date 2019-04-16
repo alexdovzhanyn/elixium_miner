@@ -14,6 +14,7 @@ defmodule Miner.Supervisor do
 
     children = [
       {Pico.Client.Supervisor, {Miner.Router, peers, port, handlers}},
+      Elixium.HostAvailability.Supervisor,
       Miner.BlockCalculator.Supervisor
     ]
 
